@@ -1,0 +1,103 @@
+name: Build Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_VERSION: 8.0.404
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        framework: [ net6.0 ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Extracted version: $TAG_VERSION"
+          echo "PACKAGE_VERSION=$TAG_VERSION" >> $GITHUB_ENV
+
+      - name: Extract repository name without owner
+        id: extract_repo_name
+        run: |
+          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
+          echo "Repository name: $REPO_NAME"
+          echo "PLUGIN_NAME=$REPO_NAME" >> $GITHUB_ENV
+
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Create global.json
+        run: |
+          echo '{"sdk":{"version": "${{ env.DOTNET_VERSION }}"}}' > ./global.json
+
+      - name: Build with package version
+        run: |
+          dotnet build *.sln -c Release -f ${{ matrix.framework }} -p:Version=${{ env.PACKAGE_VERSION }} -p:AssemblyVersion=${{ env.PACKAGE_VERSION }} -p:FileVersion=${{ env.PACKAGE_VERSION }}
+
+      - name: Find Plugin Output Directory
+        id: find_plugin_dir
+        run: |
+          PLUGIN_OUTPUT_DIR=$(find . -type d -path "*/_plugins/*/${{ env.PLUGIN_NAME }}" | head -n 1)
+          if [ -z "$PLUGIN_OUTPUT_DIR" ]; then
+            echo "Error: Plugin output directory not found!"
+            exit 1
+          fi
+          echo "PLUGIN_OUTPUT_DIR=$PLUGIN_OUTPUT_DIR" >> $GITHUB_OUTPUT
+
+      - name: Zip files matching pattern
+        run: |
+          cd ./_plugins/net6.0/${{ env.PLUGIN_NAME }}/
+          zip -r ${{ env.PLUGIN_NAME }}-v${{ env.PACKAGE_VERSION }}.${{ matrix.framework }}.zip *.${{ env.PLUGIN_NAME }}.* *.Plugin.${{ env.PLUGIN_NAME }}.*
+
+      - name: Get commit messages since last release
+        id: get_commit_messages
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 ${{ github.ref }}^ 2>/dev/null || true)
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tag found. Using initial commit."
+            COMMIT_MESSAGES=$(git log --pretty=format:"- %s")
+          else
+            COMMIT_MESSAGES=$(git log $LAST_TAG..${{ github.ref }} --pretty=format:"- %s")
+          fi
+          echo "COMMIT_MESSAGES<<EOF" >> $GITHUB_ENV
+          echo "$COMMIT_MESSAGES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Debug environment variables
+        run: |
+          echo "COMMIT_MESSAGES: $COMMIT_MESSAGES"
+          echo "TAG_DESCRIPTION: $TAG_DESCRIPTION"
+
+      - name: Create GitHub Release and Upload Artifact
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: 🚀 Release ${{ env.PACKAGE_VERSION }}
+          body: |
+            ### 📝 **Changes**
+            ${{ env.COMMIT_MESSAGES }}
+
+            ----
+
+            ### 📦 **Artifact**
+            The plugin artifact is attached to this release. Download it below!
+          files: |
+            ${{ steps.find_plugin_dir.outputs.PLUGIN_OUTPUT_DIR }}/${{ env.PLUGIN_NAME }}-v${{ env.PACKAGE_VERSION }}.${{ matrix.framework }}.zip

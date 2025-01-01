@@ -1,0 +1,62 @@
+﻿using DownloadAssistant.Base;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using NzbDrone.Core.Parser.Model;
+using System.Text.RegularExpressions;
+using YouTubeMusicAPI.Models.Info;
+
+namespace Tubifarry.Core
+{
+
+    public record Lyric(string? PlainLyrics, SyncLyric? SyncedLyrics)
+    {
+        public static async Task<Lyric?> FetchLyricsFromLRCLIBAsync(string instance, ReleaseInfo releaseInfo, AlbumSongInfo trackInfo, CancellationToken token = default)
+        {
+            string requestUri = $"{instance}/api/get?artist_name={Uri.EscapeDataString(releaseInfo.Artist)}&track_name={Uri.EscapeDataString(trackInfo.Name)}&album_name={Uri.EscapeDataString(releaseInfo.Album)}&duration={trackInfo.Duration.TotalSeconds}";
+            HttpResponseMessage response = await HttpGet.HttpClient.GetAsync(requestUri, token);
+            if (!response.IsSuccessStatusCode) return null;
+            JObject json = JObject.Parse(await response.Content.ReadAsStringAsync(token));
+            return new Lyric(json["plainLyrics"]?.ToString() ?? string.Empty, SyncLine.ParseSyncedLyrics(json["syncedLyrics"]?.ToString() ?? string.Empty));
+        }
+    }
+
+    public class SyncLyric : List<SyncLine> { }
+
+    public class SyncLine
+    {
+        [JsonProperty("lrc_timestamp")]
+        public string? LrcTimestamp { get; set; }
+
+        [JsonProperty("milliseconds")]
+        public string? Milliseconds { get; set; }
+
+        [JsonProperty("duration")]
+        public string? Duration { get; set; }
+
+        [JsonProperty("line")]
+        public string? Line { get; set; }
+
+        public static SyncLyric ParseSyncedLyrics(string syncedLyrics)
+        {
+            SyncLyric lyric = new();
+            string[] array = syncedLyrics.Split(new char[1] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < array.Length; i++)
+            {
+                Match match = Regex.Match(array[i], "\\[(\\d{2}:\\d{2}\\.\\d{2})\\](.*)");
+                if (match.Success)
+                {
+                    string value = match.Groups[1].Value;
+                    string line = match.Groups[2].Value.Trim();
+                    double totalMilliseconds = TimeSpan.ParseExact(value, "mm\\:ss\\.ff", null).TotalMilliseconds;
+                    lyric.Add(new SyncLine
+                    {
+                        LrcTimestamp = "[" + value + "]",
+                        Line = line,
+                        Milliseconds = totalMilliseconds.ToString()
+                    });
+                }
+            }
+            return lyric;
+        }
+    }
+}

@@ -1,0 +1,50 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35527.113
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tubifarry", "Tubifarry\Tubifarry.csproj", "{003DFC9A-18D9-47DB-BFC3-5375AC29B469}"
+EndProject
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "Lidarr.Console", "Submodules\Lidarr\_output\net6.0\Lidarr.Console.exe", "{6EC23C64-DEF7-4A6A-918B-1A86CCB2AF03}"
+	ProjectSection(DebuggerProjectSystem) = preProject
+		PortSupplier = 00000000-0000-0000-0000-000000000000
+		Executable = Submodules\Lidarr\_output\net6.0\Lidarr.Console.exe
+		RemoteMachine = 
+		StartingDirectory = Submodules\Lidarr\_output\net6.0
+		Environment = Standard
+		LaunchingEngine = 00000000-0000-0000-0000-000000000000
+		UseLegacyDebugEngines = No
+		LaunchSQLEngine = No
+		AttachLaunchAction = No
+		IORedirection = Auto
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lidarr.Core", "Submodules\Lidarr\src\NzbDrone.Core\Lidarr.Core.csproj", "{91CB11D7-4E7A-4B1A-AE6A-15E1F075C27A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lidarr.Common", "Submodules\Lidarr\src\NzbDrone.Common\Lidarr.Common.csproj", "{E1E12DF8-D168-4259-96C9-B7A6EE58A4AF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{003DFC9A-18D9-47DB-BFC3-5375AC29B469}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{003DFC9A-18D9-47DB-BFC3-5375AC29B469}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{003DFC9A-18D9-47DB-BFC3-5375AC29B469}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{003DFC9A-18D9-47DB-BFC3-5375AC29B469}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6EC23C64-DEF7-4A6A-918B-1A86CCB2AF03}.Debug|Any CPU.ActiveCfg = Release|x64
+		{6EC23C64-DEF7-4A6A-918B-1A86CCB2AF03}.Release|Any CPU.ActiveCfg = Release|x64
+		{91CB11D7-4E7A-4B1A-AE6A-15E1F075C27A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91CB11D7-4E7A-4B1A-AE6A-15E1F075C27A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91CB11D7-4E7A-4B1A-AE6A-15E1F075C27A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91CB11D7-4E7A-4B1A-AE6A-15E1F075C27A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E1E12DF8-D168-4259-96C9-B7A6EE58A4AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E1E12DF8-D168-4259-96C9-B7A6EE58A4AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E1E12DF8-D168-4259-96C9-B7A6EE58A4AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E1E12DF8-D168-4259-96C9-B7A6EE58A4AF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,174 @@
+﻿using NLog;
+using NzbDrone.Core.Parser.Model;
+using Requests;
+using Requests.Options;
+using System.Text.Json;
+using Tubifarry.Core;
+using YouTubeMusicAPI.Client;
+using YouTubeMusicAPI.Models.Search;
+using YouTubeMusicAPI.Models.Streaming;
+
+namespace NzbDrone.Core.Indexers.Spotify
+{
+    public interface ISpotifyToYoutubeParser : IParseIndexerResponse { }
+
+    /// <summary>
+    /// Parses Spotify responses and converts them to YouTube Music releases.
+    /// </summary>
+    public class SpotifyToYoutubeParser : ISpotifyToYoutubeParser
+    {
+        private readonly YouTubeMusicClient _ytClient;
+        private static readonly int[] StandardBitrates = { 96, 128, 160, 192, 256, 320 };
+
+        public Logger _logger { get; set; }
+
+        public SpotifyToYoutubeParser(Logger logger)
+        {
+            _logger = logger;
+            _ytClient = new YouTubeMusicClient();
+        }
+
+        /// <summary>
+        /// Parses the Spotify response and converts it to a list of ReleaseInfo objects.
+        /// </summary>
+        /// <param name="indexerResponse">The response from the Spotify indexer.</param>
+        /// <returns>A list of ReleaseInfo objects.</returns>
+        public IList<ReleaseInfo> ParseResponse(IndexerResponse indexerResponse)
+        {
+            List<ReleaseInfo> releases = new();
+
+            _logger.Debug("Starting to parse Spotify response.");
+
+            try
+            {
+                JsonDocument jsonDoc = JsonDocument.Parse(indexerResponse.Content);
+
+                if (!TryGetAlbums(jsonDoc, out JsonElement albums))
+                {
+                    _logger.Error("Spotify response does not contain 'albums' property.");
+                    return releases;
+                }
+
+                if (!TryGetItems(albums, out JsonElement items))
+                {
+                    _logger.Error("Spotify response does not contain 'items' property under 'albums'.");
+                    return releases;
+                }
+
+                ProcessAlbums(items, releases);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"An error occurred while parsing the Spotify response. Response content: {indexerResponse.Content}");
+            }
+            return releases.OrderByDescending(o => o.PublishDate).ToArray();
+        }
+
+        private bool TryGetAlbums(JsonDocument jsonDoc, out JsonElement albums) => jsonDoc.RootElement.TryGetProperty("albums", out albums);
+
+        private bool TryGetItems(JsonElement albums, out JsonElement items) => albums.TryGetProperty("items", out items);
+
+
+        private void ProcessAlbums(JsonElement items, List<ReleaseInfo> releases)
+        {
+            RequestContainer<OwnRequest> requestContainer = new();
+
+            foreach (JsonElement album in items.EnumerateArray())
+            {
+                requestContainer.Add(new OwnRequest(async (token) =>
+                {
+                    try
+                    {
+                        AlbumData albumInfo = ExtractAlbumInfo(album);
+                        albumInfo.ParseReleaseDate();
+
+                        await AddYoutubeData(albumInfo);
+
+                        if (albumInfo.Bitrate == 0)
+                            _logger.Debug($"No YouTube Music URL found for album: {albumInfo.AlbumName} by {albumInfo.ArtistName}.");
+                        else
+                            releases.Add(albumInfo.ToReleaseInfo());
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, $"An error occurred while processing an album: {ex.Message}. Album JSON: {album}");
+                        return false;
+                    }
+                }, new RequestOptions<VoidStruct, VoidStruct>() { NumberOfAttempts = 1 }));
+            }
+
+            requestContainer.Task.Wait();
+        }
+
+        private static AlbumData ExtractAlbumInfo(JsonElement album) => new()
+        {
+            AlbumId = album.TryGetProperty("id", out JsonElement idProp) ? idProp.GetString() ?? "UnknownAlbumId" : "UnknownAlbumId",
+            AlbumName = album.TryGetProperty("name", out JsonElement nameProp) ? nameProp.GetString() ?? "UnknownAlbum" : "UnknownAlbum",
+            ArtistName = album.TryGetProperty("artists", out JsonElement artistsProp) && artistsProp.GetArrayLength() > 0
+                    ? artistsProp[0].GetProperty("name").GetString() ?? "UnknownArtist" : "UnknownArtist",
+            SpotifyUrl = album.TryGetProperty("external_urls", out JsonElement externalUrlsProp)
+                    ? externalUrlsProp.GetProperty("spotify").GetString() ?? string.Empty : string.Empty,
+            ReleaseDate = album.TryGetProperty("release_date", out JsonElement releaseDateProp) ? releaseDateProp.GetString() ?? "0000-01-01" : "0000-01-01",
+            ReleaseDatePrecision = album.TryGetProperty("release_date_precision", out JsonElement releaseDatePrecisionProp)
+                    ? releaseDatePrecisionProp.GetString() ?? "day" : "day",
+            TotalTracks = album.TryGetProperty("total_tracks", out JsonElement totalTracksProp) ? totalTracksProp.GetInt32() : 0,
+            ExplicitContent = album.TryGetProperty("explicit", out JsonElement explicitProp) && explicitProp.GetBoolean(),
+            CoverUrl = album.TryGetProperty("images", out JsonElement imagesProp) && imagesProp.GetArrayLength() > 0
+                    ? imagesProp[0].GetProperty("url").GetString() ?? string.Empty : string.Empty,
+            CoverResolution = album.TryGetProperty("images", out JsonElement imagesProp2) && imagesProp2.GetArrayLength() > 0
+                    ? $"{imagesProp2[0].GetProperty("width").GetInt32()}x{imagesProp2[0].GetProperty("height").GetInt32()}" : "UnknownResolution"
+        };
+
+
+        private async Task AddYoutubeData(AlbumData parameters)
+        {
+            try
+            {
+                string query = $"\"{parameters.AlbumName}\" \"{parameters.ArtistName}\"";
+                IEnumerable<AlbumSearchResult> searchResults = await _ytClient.SearchAsync<AlbumSearchResult>(query);
+
+                if (searchResults == null || !searchResults.Any()) return;
+                searchResults = searchResults.Count() > 4 ? searchResults.Take(1) : searchResults;
+
+                foreach (AlbumSearchResult result in searchResults)
+                {
+
+                    if (!IsRelevantResult(result, parameters)) continue;
+
+                    YouTubeMusicAPI.Models.Info.AlbumInfo album = await _ytClient.GetAlbumInfoAsync(await _ytClient.GetAlbumBrowseIdAsync(result.Id));
+
+                    if (album?.Songs == null || !album.Songs.Any()) continue;
+
+                    if (parameters.TotalTracks > 0 && Math.Abs(album.Songs.Length - parameters.TotalTracks) / (double)parameters.TotalTracks > 0.6) continue;
+
+                    if (album.ReleaseYear != 0 && Math.Abs(album.ReleaseYear - parameters.ReleaseDateTime.Year) > 1) continue;
+
+                    YouTubeMusicAPI.Models.Info.AlbumSongInfo firstTrack = album.Songs.First();
+                    if (firstTrack.Id == null)
+                        continue;
+
+                    StreamingData streamingData = await _ytClient.GetStreamingDataAsync(firstTrack.Id);
+                    AudioStreamInfo? highestAudioStreamInfo = streamingData.StreamInfo.OfType<AudioStreamInfo>().OrderByDescending(info => info.Bitrate).FirstOrDefault();
+
+                    if (highestAudioStreamInfo != null)
+                    {
+                        parameters.Duration = (long)album.Duration.TotalSeconds;
+                        parameters.Bitrate = RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
+                        parameters.AlbumId = result.Id;
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Error: {ex.Message}");
+            }
+        }
+
+        private static bool IsRelevantResult(AlbumSearchResult result, AlbumData parameters) => result.Name.Contains(parameters.AlbumName, StringComparison.OrdinalIgnoreCase) &&
+                   result.Artists.Any(x => x.Name.Contains(parameters.ArtistName, StringComparison.OrdinalIgnoreCase));
+
+        private static int RoundToStandardBitrate(int bitrateKbps) => StandardBitrates.OrderBy(b => Math.Abs(b - bitrateKbps)).First();
+    }
+}
