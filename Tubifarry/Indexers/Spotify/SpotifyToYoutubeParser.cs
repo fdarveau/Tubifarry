@@ -64,10 +64,9 @@ namespace NzbDrone.Core.Indexers.Spotify
             return releases.OrderByDescending(o => o.PublishDate).ToArray();
         }
 
-        private bool TryGetAlbums(JsonDocument jsonDoc, out JsonElement albums) => jsonDoc.RootElement.TryGetProperty("albums", out albums);
+        private static bool TryGetAlbums(JsonDocument jsonDoc, out JsonElement albums) => jsonDoc.RootElement.TryGetProperty("albums", out albums);
 
-        private bool TryGetItems(JsonElement albums, out JsonElement items) => albums.TryGetProperty("items", out items);
-
+        private static bool TryGetItems(JsonElement albums, out JsonElement items) => albums.TryGetProperty("items", out items);
 
         private void ProcessAlbums(JsonElement items, List<ReleaseInfo> releases)
         {
@@ -121,28 +120,26 @@ namespace NzbDrone.Core.Indexers.Spotify
         };
 
 
-        private async Task AddYoutubeData(AlbumData parameters)
+        private async Task AddYoutubeData(AlbumData albumData)
         {
             try
             {
-                string query = $"\"{parameters.AlbumName}\" \"{parameters.ArtistName}\"";
-                IEnumerable<AlbumSearchResult> searchResults = await _ytClient.SearchAsync<AlbumSearchResult>(query);
+                string query = $"\"{albumData.AlbumName}\" \"{albumData.ArtistName}\"";
+                IEnumerable<AlbumSearchResult> searchResults = await _ytClient.SearchAsync<AlbumSearchResult>(query, 4);
 
                 if (searchResults == null || !searchResults.Any()) return;
-                searchResults = searchResults.Count() > 4 ? searchResults.Take(1) : searchResults;
-
                 foreach (AlbumSearchResult result in searchResults)
                 {
+                    if (!IsRelevantResult(result, albumData)) continue;
 
-                    if (!IsRelevantResult(result, parameters)) continue;
-
-                    YouTubeMusicAPI.Models.Info.AlbumInfo album = await _ytClient.GetAlbumInfoAsync(await _ytClient.GetAlbumBrowseIdAsync(result.Id));
+                    string browsID = await _ytClient.GetAlbumBrowseIdAsync(result.Id);
+                    YouTubeMusicAPI.Models.Info.AlbumInfo album = await _ytClient.GetAlbumInfoAsync(browsID);
 
                     if (album?.Songs == null || !album.Songs.Any()) continue;
 
-                    if (parameters.TotalTracks > 0 && Math.Abs(album.Songs.Length - parameters.TotalTracks) / (double)parameters.TotalTracks > 0.6) continue;
+                    if (albumData.TotalTracks > 0 && Math.Abs(album.Songs.Length - albumData.TotalTracks) / (double)albumData.TotalTracks > 0.6) continue;
 
-                    if (album.ReleaseYear != 0 && Math.Abs(album.ReleaseYear - parameters.ReleaseDateTime.Year) > 1) continue;
+                    if (album.ReleaseYear != 0 && Math.Abs(album.ReleaseYear - albumData.ReleaseDateTime.Year) > 1) continue;
 
                     YouTubeMusicAPI.Models.Info.AlbumSongInfo firstTrack = album.Songs.First();
                     if (firstTrack.Id == null)
@@ -153,9 +150,9 @@ namespace NzbDrone.Core.Indexers.Spotify
 
                     if (highestAudioStreamInfo != null)
                     {
-                        parameters.Duration = (long)album.Duration.TotalSeconds;
-                        parameters.Bitrate = RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
-                        parameters.AlbumId = result.Id;
+                        albumData.Duration = (long)album.Duration.TotalSeconds;
+                        albumData.Bitrate = RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
+                        albumData.AlbumId = result.Id;
                         break;
                     }
                 }

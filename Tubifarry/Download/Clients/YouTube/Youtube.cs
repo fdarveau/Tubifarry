@@ -18,17 +18,15 @@ namespace NzbDrone.Core.Download.Clients.YouTube
 
         public Youtube(IYoutubeDownloadManager dlManager, IConfigService configService, IDiskProvider diskProvider, IRemotePathMappingService remotePathMappingService, Logger logger) : base(configService, diskProvider, remotePathMappingService, logger) => _dlManager = dlManager;
 
-
         public override string Name => "Youtube";
 
         public bool _tested = false;
 
-        public override string Protocol => nameof(TubifarryDownloadProtocol);
+        public override string Protocol => nameof(YoutubeDownloadProtocol);
 
         public new YoutubeProviderSettings Settings => base.Settings;
 
         public override Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer) => _dlManager.Download(remoteAlbum, indexer, this);
-
 
         public override IEnumerable<DownloadClientItem> GetItems() => _dlManager.GetItems();
 
@@ -77,9 +75,7 @@ namespace NzbDrone.Core.Download.Clients.YouTube
             }
 
             if (Settings.ReEncode == ReEncodeOptions.UseCustomFFmpeg && !AudioMetadataHandler.FFmpegIsInstalled)
-            {
                 failures.Add(new ValidationFailure("FFmpegPath", $"The specified FFmpeg path does not exist: {Settings.FFmpegPath}"));
-            }
         }
     }
 }

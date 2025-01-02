@@ -66,7 +66,6 @@ namespace NzbDrone.Download.Clients.YouTube
 
         public IEnumerable<DownloadClientItem> GetItems() => _queue.Select(x => x.ClientItem);
 
-
         public void RemoveItem(DownloadClientItem item)
         {
             YouTubeAlbumRequest? req = _queue.ToList().Find(x => x.ID == item.DownloadId);

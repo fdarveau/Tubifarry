@@ -37,7 +37,7 @@ namespace NzbDrone.Core.Download.Clients.YouTube
         public string DownloadPath { get; set; } = "";
 
         [FieldDefinition(1, Label = "Use LRCLIB Lyric Provider", HelpText = "Enable this option to fetch lyrics from LRCLIB.", Type = FieldType.Checkbox)]
-        public bool UseLRCLIB { get; set; } = true;
+        public bool UseLRCLIB { get; set; } = false;
 
         [FieldDefinition(2, Label = "Save Synced Lyrics", HelpText = "Enable this option to save synced lyrics to a separate .lrc file, if available. Requires .lrc to be allowed under Import Extra Files.", Type = FieldType.Checkbox)]
         public bool SaveSyncedLyrics { get; set; } = false;
@@ -49,10 +49,10 @@ namespace NzbDrone.Core.Download.Clients.YouTube
         public int Chunks { get; set; } = 2;
 
         [FieldDefinition(5, Label = "ReEncode", Type = FieldType.Select, SelectOptions = typeof(ReEncodeOptions), HelpText = "Specify whether to re-encode audio files and how to handle FFmpeg.")]
-        public ReEncodeOptions ReEncode { get; set; } = ReEncodeOptions.Disabled;
+        public ReEncodeOptions ReEncode { get; set; } = ReEncodeOptions.UseFFmpegOrInstall;
 
-        [FieldDefinition(6, Label = "FFmpeg Path", Type = FieldType.Path, HelpText = "Specify the path to the FFmpeg binary. Required if 'Use Custom FFmpeg' is selected.", Advanced = true)]
-        public string FFmpegPath { get; set; } = "";
+        [FieldDefinition(6, Label = "FFmpeg Path", Type = FieldType.Path, Placeholder = "/downloads/FFmpeg", HelpText = "Specify the path to the FFmpeg binary. Not required if 'Disabled' is selected.", Advanced = false)]
+        public string FFmpegPath { get; set; } = string.Empty;
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));
     }

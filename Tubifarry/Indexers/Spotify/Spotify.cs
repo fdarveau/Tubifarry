@@ -9,7 +9,7 @@ namespace NzbDrone.Core.Indexers.Spotify
     internal class Spotify : HttpIndexerBase<SpotifyIndexerSettings>
     {
         public override string Name => "Tubifarry";
-        public override string Protocol => nameof(TubifarryDownloadProtocol);
+        public override string Protocol => nameof(YoutubeDownloadProtocol);
         public override bool SupportsRss => false;
         public override bool SupportsSearch => true;
         public override int PageSize => 50;

@@ -9,6 +9,7 @@ using Requests;
 using Requests.Options;
 using System.Text;
 using Tubifarry.Core;
+using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models;
 using YouTubeMusicAPI.Models.Info;
 using YouTubeMusicAPI.Models.Streaming;
@@ -31,7 +32,7 @@ namespace Tubifarry.Download.Clients
         private readonly ReleaseInfo _releaseInfo;
         private readonly DownloadClientItem _clientItem;
 
-        private double _smoothedBytesPerSecond = 0;
+        private double _smoothedBytesPerSecond;
 
         private Logger? Logger => Options.Logger;
 
@@ -55,7 +56,7 @@ namespace Tubifarry.Download.Clients
 
         public YouTubeAlbumRequest(RemoteAlbum remoteAlbum, YouTubeAlbumOptions? options) : base(options)
         {
-            Options.YouTubeMusicClient ??= new();
+            Options.YouTubeMusicClient ??= new YouTubeMusicClient();
             _releaseInfo = remoteAlbum.Release;
             _requestContainer.Add(_trackContainer);
             _destinationPath = new(Path.Combine(Options.DownloadPath, _releaseInfo.Artist, _releaseInfo.Album));
@@ -71,8 +72,8 @@ namespace Tubifarry.Download.Clients
                 AlbumInfo albumInfo = await Options.YouTubeMusicClient.GetAlbumInfoAsync(albumBrowseID, token);
                 if (albumInfo?.Songs == null || !albumInfo.Songs.Any())
                 {
-                    _message.AppendLine("No tracks to download found in the album.");
-                    Logger?.Debug("No tracks to download found in the album.");
+                    _message.AppendLine($"No tracks to download found in the album: {_releaseInfo.Album}.");
+                    Logger?.Debug($"No tracks to download found in the album: {_releaseInfo.Album}.");
                     return false;
                 }
 
@@ -198,7 +199,7 @@ namespace Tubifarry.Download.Clients
             if (Options.TryIncludeSycLrc)
                 await audioData.TryCreateLrcFileAsync(token);
 
-            GetRemainingSize();
+            GetRemainingTime();
             return true;
         }
 
@@ -210,6 +211,7 @@ namespace Tubifarry.Download.Clients
             DownloadClientInfo = Options.ClientInfo,
             OutputPath = _destinationPath,
         };
+
         private TimeSpan? GetRemainingTime()
         {
             long remainingSize = GetRemainingSize();

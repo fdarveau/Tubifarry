@@ -41,7 +41,7 @@ namespace Tubifarry.Core
                 DownloadUrl = AlbumId,
                 InfoUrl = SpotifyUrl,
                 PublishDate = ReleaseDateTime,
-                DownloadProtocol = nameof(TubifarryDownloadProtocol),
+                DownloadProtocol = nameof(YoutubeDownloadProtocol),
                 Title = ConstructTitle(),
                 Codec = "MP3",
                 Resolution = CoverResolution,

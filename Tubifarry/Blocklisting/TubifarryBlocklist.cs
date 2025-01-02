@@ -11,7 +11,7 @@ namespace NzbDrone.Core.Blocklisting
 
         public TubifarryBlocklist(IBlocklistRepository blocklistRepository) => _blocklistRepository = blocklistRepository;
 
-        public string Protocol => nameof(TubifarryDownloadProtocol);
+        public string Protocol => nameof(YoutubeDownloadProtocol);
 
         public bool IsBlocklisted(int artistId, ReleaseInfo release) => _blocklistRepository.BlocklistedByTorrentInfoHash(artistId, release.Guid).Any(b => SameRelease(b, release));
 

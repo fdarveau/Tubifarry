@@ -1,4 +1,4 @@
 namespace NzbDrone.Core.Indexers
 {
-    public class TubifarryDownloadProtocol : IDownloadProtocol { }
+    public class YoutubeDownloadProtocol : IDownloadProtocol { }
 }
