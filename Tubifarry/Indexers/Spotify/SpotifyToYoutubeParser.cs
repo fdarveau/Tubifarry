@@ -3,6 +3,7 @@ using NzbDrone.Core.Parser.Model;
 using Requests;
 using Requests.Options;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Tubifarry.Core;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Search;
@@ -56,12 +57,14 @@ namespace NzbDrone.Core.Indexers.Spotify
                 }
 
                 ProcessAlbums(items, releases);
+                return releases.OrderByDescending(o => o.PublishDate).ToArray();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, $"An error occurred while parsing the Spotify response. Response content: {indexerResponse.Content}");
             }
             return releases.OrderByDescending(o => o.PublishDate).ToArray();
+
         }
 
         private static bool TryGetAlbums(JsonDocument jsonDoc, out JsonElement albums) => jsonDoc.RootElement.TryGetProperty("albums", out albums);
@@ -87,6 +90,7 @@ namespace NzbDrone.Core.Indexers.Spotify
                             _logger.Debug($"No YouTube Music URL found for album: {albumInfo.AlbumName} by {albumInfo.ArtistName}.");
                         else
                             releases.Add(albumInfo.ToReleaseInfo());
+
                         return true;
                     }
                     catch (Exception ex)
@@ -128,8 +132,12 @@ namespace NzbDrone.Core.Indexers.Spotify
                 IEnumerable<AlbumSearchResult> searchResults = await _ytClient.SearchAsync<AlbumSearchResult>(query, 4);
 
                 if (searchResults == null || !searchResults.Any()) return;
+
                 foreach (AlbumSearchResult result in searchResults)
                 {
+                    if (result == null)
+                        continue;
+
                     if (!IsRelevantResult(result, albumData)) continue;
 
                     string browsID = await _ytClient.GetAlbumBrowseIdAsync(result.Id);
@@ -141,8 +149,8 @@ namespace NzbDrone.Core.Indexers.Spotify
 
                     if (album.ReleaseYear != 0 && Math.Abs(album.ReleaseYear - albumData.ReleaseDateTime.Year) > 1) continue;
 
-                    YouTubeMusicAPI.Models.Info.AlbumSongInfo firstTrack = album.Songs.First();
-                    if (firstTrack.Id == null)
+                    YouTubeMusicAPI.Models.Info.AlbumSongInfo? firstTrack = album.Songs.FirstOrDefault();
+                    if (firstTrack?.Id == null)
                         continue;
 
                     StreamingData streamingData = await _ytClient.GetStreamingDataAsync(firstTrack.Id);
@@ -163,8 +171,36 @@ namespace NzbDrone.Core.Indexers.Spotify
             }
         }
 
-        private static bool IsRelevantResult(AlbumSearchResult result, AlbumData parameters) => result.Name.Contains(parameters.AlbumName, StringComparison.OrdinalIgnoreCase) &&
-                   result.Artists.Any(x => x.Name.Contains(parameters.ArtistName, StringComparison.OrdinalIgnoreCase));
+        private bool IsRelevantResult(AlbumSearchResult result, AlbumData parameters)
+        {
+            string normalizedResultName = NormalizeTitle(result.Name);
+            string normalizedParametersAlbumName = NormalizeTitle(parameters.AlbumName);
+
+            bool isAlbumMatch = normalizedResultName.Contains(normalizedParametersAlbumName, StringComparison.OrdinalIgnoreCase);
+            bool isArtistMatch = result.Artists.Any(x => x.Name.Contains(parameters.ArtistName, StringComparison.OrdinalIgnoreCase));
+
+            return isAlbumMatch && isArtistMatch;
+        }
+
+
+        private static string NormalizeTitle(string title)
+        {
+            title = Regex.Replace(title, @"[\(\[].*?[\)\]]", "").Trim();
+
+            title = Regex.Replace(title, @"\[\w+(_\w+)?\]", "").Trim();
+
+            Match match = Regex.Match(title, @"^(?<artist>.+?)(?: - )(?<album>.+?)(?: - )(?<year>\d{4})");
+            if (match.Success)
+            {
+                string artist = match.Groups["artist"].Value.Trim();
+                string album = match.Groups["album"].Value.Trim();
+                string year = match.Groups["year"].Value.Trim();
+
+                return $"{artist} - {album} - {year}";
+            }
+
+            return title;
+        }
 
         private static int RoundToStandardBitrate(int bitrateKbps) => StandardBitrates.OrderBy(b => Math.Abs(b - bitrateKbps)).First();
     }

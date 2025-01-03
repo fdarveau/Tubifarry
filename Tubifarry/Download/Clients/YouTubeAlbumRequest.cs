@@ -18,11 +18,6 @@ namespace Tubifarry.Download.Clients
 {
     internal class YouTubeAlbumRequest : Request<YouTubeAlbumOptions, string, string>
     {
-        /// <summary>
-        /// Adjust this value to control the smoothing effect. Small conservative high responsive
-        /// </summary>
-        private const double SmoothingFactor = 0.4;
-
         private readonly OsPath _destinationPath;
         private byte[]? _albumCover;
 
@@ -31,8 +26,6 @@ namespace Tubifarry.Download.Clients
         private readonly RequestContainer<LoadRequest> _trackContainer = new();
         private readonly ReleaseInfo _releaseInfo;
         private readonly DownloadClientItem _clientItem;
-
-        private double _smoothedBytesPerSecond;
 
         private Logger? Logger => Options.Logger;
 
@@ -135,7 +128,7 @@ namespace Tubifarry.Download.Clients
             {
                 CancellationToken = Token,
                 CreateSpeedReporter = true,
-                SpeedReporterTimeout = 20000,
+                SpeedReporterTimeout = 1,
                 Priority = RequestPriority.Normal,
                 DelayBetweenAttemps = Options.DelayBetweenAttemps,
                 Filename = $"{trackInfo.SongNumber} - {trackInfo.Name}.mp3",
@@ -212,17 +205,32 @@ namespace Tubifarry.Download.Clients
             OutputPath = _destinationPath,
         };
 
+        private DateTime _lastUpdateTime = DateTime.MinValue;
+        private long _lastRemainingSize = 0;
+
         private TimeSpan? GetRemainingTime()
         {
             long remainingSize = GetRemainingSize();
-            long totalSpeed = _trackContainer.Sum(x => x.CurrentBytesPerSecond);
+            if (_lastUpdateTime != DateTime.MinValue && _lastRemainingSize != 0)
+            {
+                TimeSpan timeElapsed = DateTime.UtcNow - _lastUpdateTime;
+                long bytesDownloaded = _lastRemainingSize - remainingSize;
 
-            _smoothedBytesPerSecond = _smoothedBytesPerSecond == 0 ? totalSpeed : SmoothingFactor * totalSpeed + (1 - SmoothingFactor) * _smoothedBytesPerSecond;
+                if (timeElapsed.TotalSeconds > 0 && bytesDownloaded > 0)
+                {
+                    double bytesPerSecond = bytesDownloaded / timeElapsed.TotalSeconds;
 
-            if (_smoothedBytesPerSecond <= 0) return null;
+                    double remainingSeconds = remainingSize / bytesPerSecond;
 
-            double remainingSeconds = remainingSize / _smoothedBytesPerSecond;
-            return TimeSpan.FromSeconds(remainingSeconds);
+                    if (remainingSeconds < 0)
+                        return TimeSpan.FromSeconds(10);
+                    return TimeSpan.FromSeconds(remainingSeconds);
+                }
+            }
+
+            _lastUpdateTime = DateTime.UtcNow;
+            _lastRemainingSize = remainingSize;
+            return null;
         }
 
         private string GetDistinctMessages()
