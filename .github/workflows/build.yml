@@ -70,13 +70,20 @@ jobs:
       - name: Get commit messages since last release
         id: get_commit_messages
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 ${{ github.ref }}^ 2>/dev/null || true)
+          LAST_TAG=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=1) 2>/dev/null || true)
           if [ -z "$LAST_TAG" ]; then
             echo "No previous tag found. Using initial commit."
             COMMIT_MESSAGES=$(git log --pretty=format:"- %s")
           else
-            COMMIT_MESSAGES=$(git log $LAST_TAG..${{ github.ref }} --pretty=format:"- %s")
+            COMMIT_MESSAGES=$(git log $LAST_TAG..HEAD --pretty=format:"- %s")
           fi
+          if [ -z "$COMMIT_MESSAGES" ]; then
+            COMMIT_MESSAGES=$(git log --oneline $(git describe --tags --abbrev=0)@^..@ | sed 's/^/- /')
+          fi
+          if [ -z "$COMMIT_MESSAGES" ]; then
+            COMMIT_MESSAGES=$(git log --all --oneline | sed 's/^/- /')
+          fi
+          echo "Commit messages: $COMMIT_MESSAGES"
           echo "COMMIT_MESSAGES<<EOF" >> $GITHUB_ENV
           echo "$COMMIT_MESSAGES" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV

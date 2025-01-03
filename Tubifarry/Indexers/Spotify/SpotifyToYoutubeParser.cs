@@ -11,22 +11,34 @@ using YouTubeMusicAPI.Models.Streaming;
 
 namespace NzbDrone.Core.Indexers.Spotify
 {
-    public interface ISpotifyToYoutubeParser : IParseIndexerResponse { }
+    public interface ISpotifyToYoutubeParser : IParseIndexerResponse
+    {
+        public void SetCookies(string path);
+    }
 
     /// <summary>
     /// Parses Spotify responses and converts them to YouTube Music releases.
     /// </summary>
     public class SpotifyToYoutubeParser : ISpotifyToYoutubeParser
     {
-        private readonly YouTubeMusicClient _ytClient;
+        private YouTubeMusicClient _ytClient;
         private static readonly int[] StandardBitrates = { 96, 128, 160, 192, 256, 320 };
 
         public Logger _logger { get; set; }
+        private string? _cookiePath;
 
         public SpotifyToYoutubeParser(Logger logger)
         {
             _logger = logger;
             _ytClient = new YouTubeMusicClient();
+        }
+
+        public void SetCookies(string path)
+        {
+            if (string.IsNullOrEmpty(path) || path == _cookiePath)
+                return;
+            _cookiePath = path;
+            _ytClient = new(cookies: CookieManager.ParseCookieFile(path));
         }
 
         /// <summary>
@@ -37,7 +49,6 @@ namespace NzbDrone.Core.Indexers.Spotify
         public IList<ReleaseInfo> ParseResponse(IndexerResponse indexerResponse)
         {
             List<ReleaseInfo> releases = new();
-
             _logger.Debug("Starting to parse Spotify response.");
 
             try
@@ -167,11 +178,11 @@ namespace NzbDrone.Core.Indexers.Spotify
             }
             catch (Exception ex)
             {
-                _logger.Error($"Error: {ex.Message}");
+                _logger.Error($"Error while adding Youtube data: {ex.Message}");
             }
         }
 
-        private bool IsRelevantResult(AlbumSearchResult result, AlbumData parameters)
+        private static bool IsRelevantResult(AlbumSearchResult result, AlbumData parameters)
         {
             string normalizedResultName = NormalizeTitle(result.Name);
             string normalizedParametersAlbumName = NormalizeTitle(parameters.AlbumName);
@@ -181,7 +192,6 @@ namespace NzbDrone.Core.Indexers.Spotify
 
             return isAlbumMatch && isArtistMatch;
         }
-
 
         private static string NormalizeTitle(string title)
         {

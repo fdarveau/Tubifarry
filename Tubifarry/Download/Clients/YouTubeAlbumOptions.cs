@@ -25,6 +25,8 @@ namespace Tubifarry.Download.Clients
 
         public bool ReEncodeToMP3 { get; set; }
 
+        public bool UseID3v2_3 { get; set; }
+
         public YouTubeAlbumOptions() { }
 
         protected YouTubeAlbumOptions(YouTubeAlbumOptions options) : base(options)
@@ -35,6 +37,7 @@ namespace Tubifarry.Download.Clients
             TryIncludeSycLrc = options.TryIncludeSycLrc;
             TryIncludeLrc = options.TryIncludeLrc;
             Chunks = options.Chunks;
+            UseID3v2_3 = options.UseID3v2_3;
             ReEncodeToMP3 = options.ReEncodeToMP3;
             LRCLIBInstance = options.LRCLIBInstance;
             DownloadPath = options.DownloadPath;

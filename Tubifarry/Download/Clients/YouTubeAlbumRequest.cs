@@ -19,13 +19,15 @@ namespace Tubifarry.Download.Clients
     internal class YouTubeAlbumRequest : Request<YouTubeAlbumOptions, string, string>
     {
         private readonly OsPath _destinationPath;
-        private byte[]? _albumCover;
-
         private readonly StringBuilder _message = new();
         private readonly RequestContainer<IRequest> _requestContainer = new();
         private readonly RequestContainer<LoadRequest> _trackContainer = new();
         private readonly ReleaseInfo _releaseInfo;
         private readonly DownloadClientItem _clientItem;
+
+        private DateTime _lastUpdateTime = DateTime.MinValue;
+        private long _lastRemainingSize = 0;
+        private byte[]? _albumCover;
 
         private Logger? Logger => Options.Logger;
 
@@ -61,11 +63,12 @@ namespace Tubifarry.Download.Clients
         {
             _requestContainer.Add(new OwnRequest(async (token) =>
             {
+                Directory.CreateDirectory(_destinationPath.FullPath);
                 string albumBrowseID = await Options.YouTubeMusicClient!.GetAlbumBrowseIdAsync(_releaseInfo.DownloadUrl, token);
                 AlbumInfo albumInfo = await Options.YouTubeMusicClient.GetAlbumInfoAsync(albumBrowseID, token);
                 if (albumInfo?.Songs == null || !albumInfo.Songs.Any())
                 {
-                    _message.AppendLine($"No tracks to download found in the album: {_releaseInfo.Album}.");
+                    _message.AppendLine($"No tracks to download found in the album: {_releaseInfo.Album}");
                     Logger?.Debug($"No tracks to download found in the album: {_releaseInfo.Album}.");
                     return false;
                 }
@@ -178,7 +181,7 @@ namespace Tubifarry.Download.Clients
             if (!File.Exists(trackPath))
                 return false;
 
-            AudioMetadataHandler audioData = new(trackPath, Options.Logger) { AlbumCover = _albumCover };
+            AudioMetadataHandler audioData = new(trackPath, Options.Logger) { AlbumCover = _albumCover, UseID3v2_3 = Options.UseID3v2_3 };
 
             if (Options.TryIncludeLrc)
                 audioData.Lyric = await Lyric.FetchLyricsFromLRCLIBAsync(Options.LRCLIBInstance, _releaseInfo, trackInfo, token);
@@ -204,9 +207,6 @@ namespace Tubifarry.Download.Clients
             DownloadClientInfo = Options.ClientInfo,
             OutputPath = _destinationPath,
         };
-
-        private DateTime _lastUpdateTime = DateTime.MinValue;
-        private long _lastRemainingSize = 0;
 
         private TimeSpan? GetRemainingTime()
         {

@@ -4,6 +4,7 @@ using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
 using Requests;
+using Tubifarry.Core;
 using Tubifarry.Download.Clients;
 using YouTubeMusicAPI.Client;
 
@@ -16,34 +17,44 @@ namespace NzbDrone.Download.Clients.YouTube
     /// </summary>
     public interface IYoutubeDownloadManager
     {
-        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, Youtube provider);
+        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, YoutubeClient provider);
         public IEnumerable<DownloadClientItem> GetItems();
         public void RemoveItem(DownloadClientItem item);
+        public void SetCookies(string path);
     }
 
     public class YoutubeDownloadManager : IYoutubeDownloadManager
     {
-        private Logger _logger;
         private readonly RequestContainer<YouTubeAlbumRequest> _queue;
-        private readonly YouTubeMusicClient _ytClient;
+        private YouTubeMusicClient _ytClient;
         private Task? _testTask;
+        private string? _cookiePath;
+        private Logger _logger;
 
 
         /// <summary>
         /// Private constructor to prevent external instantiation.
-        /// Initializes a new instance of the <see cref="YoutubeDownloadManager"/> class and generates a GUID.
+        /// Initializes a new instance of the <see cref="YoutubeDownloadManager"/> class.
         /// </summary>
         public YoutubeDownloadManager(Logger logger)
         {
             _logger = logger;
             _queue = new();
             _ytClient = new YouTubeMusicClient();
-            _logger.Info("YoutubeDownloadManager initialized.");
+            _logger.Debug("Initialized");
         }
 
-        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, Youtube provider)
+        public void SetCookies(string path)
         {
-            _testTask ??= provider.TestFFmpeg(new());
+            if (string.IsNullOrEmpty(path) || path == _cookiePath)
+                return;
+            _cookiePath = path;
+            _ytClient = new(cookies: CookieManager.ParseCookieFile(path));
+        }
+
+        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, YoutubeClient provider)
+        {
+            _testTask ??= provider.TestFFmpeg();
             _testTask.Wait();
             YouTubeAlbumRequest request = new(remoteAlbum, new()
             {
@@ -55,6 +66,7 @@ namespace NzbDrone.Download.Clients.YouTube
                 Chunks = provider.Settings.Chunks,
                 DelayBetweenAttemps = TimeSpan.FromSeconds(5),
                 NumberOfAttempts = 2,
+                UseID3v2_3 = provider.Settings.UseID3v2_3,
                 ReEncodeToMP3 = provider.Settings.ReEncode > 0,
                 ClientInfo = DownloadClientItemClientInfo.FromDownloadClient(provider, false),
                 Logger = _logger,

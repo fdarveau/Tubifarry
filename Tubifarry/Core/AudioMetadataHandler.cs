@@ -14,6 +14,8 @@ namespace Tubifarry.Core
         public byte[]? AlbumCover { get; set; }
         public string FileType { get; }
 
+        public bool UseID3v2_3 { get; set; }
+
         public AudioMetadataHandler(string originalPath, Logger? logger)
         {
             _trackPath = originalPath;
@@ -44,6 +46,17 @@ namespace Tubifarry.Core
             try
             {
                 using TagLib.File file = TagLib.File.Create(_trackPath);
+
+                if (UseID3v2_3)
+                {
+                    TagLib.Id3v2.Tag.DefaultVersion = 3;
+                    TagLib.Id3v2.Tag.ForceDefaultVersion = true;
+                }
+                else
+                {
+                    TagLib.Id3v2.Tag.DefaultVersion = 4;
+                    TagLib.Id3v2.Tag.ForceDefaultVersion = false;
+                }
 
                 if (!string.IsNullOrEmpty(trackInfo.Name))
                     file.Tag.Title = trackInfo.Name;
@@ -77,14 +90,7 @@ namespace Tubifarry.Core
                 try
                 {
                     if (AlbumCover != null)
-                    {
-                        file.Tag.Pictures = new TagLib.IPicture[]{ new TagLib.Picture(new TagLib.ByteVector(AlbumCover))
-                {
-                    Type = TagLib.PictureType.FrontCover,
-                    MimeType = "image/jpeg",
-                    Description = "Cover"
-                }};
-                    }
+                        file.Tag.Pictures = new TagLib.IPicture[] { new TagLib.Picture(new TagLib.ByteVector(AlbumCover)) };
                 }
                 catch (Exception ex)
                 {

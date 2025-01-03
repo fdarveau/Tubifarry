@@ -29,7 +29,9 @@ To switch to the Plugins Branch:
 2. **Max Audio Quality**: Tubifarry supports a maximum audio quality of **256kb/s** for downloaded files. However, most files are in **MP3-VBR-V0** format.  
 
    **What is MP3-VBR-V0?**  
-   MP3-VBR-V0 is a high-quality audio format that uses **Variable Bitrate (VBR)** to optimize both sound quality and file size. Unlike a fixed bitrate (e.g., 128kb/s), VBR adjusts the bitrate dynamically based on the complexity of the audio. For example, it uses a higher bitrate for detailed parts of a song (like a chorus) and a lower bitrate for simpler parts (like silence). 
+   MP3-VBR-V0 is a high-quality audio format that uses **Variable Bitrate (VBR)** to optimize both sound quality and file size. Unlike a fixed bitrate (e.g., 128kb/s), VBR adjusts the bitrate dynamically based on the complexity of the audio. For example, it uses a higher bitrate for detailed parts of a song (like a chorus) and a lower bitrate for simpler parts (like silence).  
+
+   **Note**: For higher-quality audio (e.g., 256kb/s), you need a **YouTube Premium subscription**.  
 
 ---
 
@@ -56,6 +58,13 @@ To switch to the Plugins Branch:
 - **FFmpeg Issues**: If songs fail to process, verify that FFmpeg is correctly installed and accessible in your system's PATH. If not, try reinstalling or downloading it manually.  
 - **MP4 Metadata**: If metadata is not being added to downloaded files, confirm that FFmpeg is converting files to MP3 format (check debug logs). MP4 files are not supported for metadata tagging by TagLib.  
 - **Audio Quality**: Ensure the maximum audio quality is set to **128 kb/s** in your settings to avoid compatibility issues.  
+- **No Release Found**: If no release is found, YouTube might flag the plugin as a bot (which it technically is). To avoid this and access higher-quality audio, you can log in using cookies.  
+  - **Steps to Use Cookies**:  
+    1. Install the **cookies.txt** extension for your browser:  
+       - [Get cookies.txt for Chrome](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)  
+       - [Get cookies.txt for Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/)  
+    2. Log in to YouTube and save the cookies.txt file in a folder accessible by Lidarr.  
+    3. Go to the **Indexer and Downloader** settings in Lidarr and add the file path to the cookies.txt file.  
 
 ---
 

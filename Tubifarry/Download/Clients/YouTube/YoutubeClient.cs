@@ -3,6 +3,7 @@ using DownloadAssistant.Requests;
 using FluentValidation.Results;
 using NLog;
 using NzbDrone.Common.Disk;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
@@ -12,15 +13,16 @@ using Tubifarry.Core;
 
 namespace NzbDrone.Core.Download.Clients.YouTube
 {
-    public class Youtube : DownloadClientBase<YoutubeProviderSettings>
+    public class YoutubeClient : DownloadClientBase<YoutubeProviderSettings>
     {
         private readonly IYoutubeDownloadManager _dlManager;
 
-        public Youtube(IYoutubeDownloadManager dlManager, IConfigService configService, IDiskProvider diskProvider, IRemotePathMappingService remotePathMappingService, Logger logger) : base(configService, diskProvider, remotePathMappingService, logger) => _dlManager = dlManager;
+        public YoutubeClient(IYoutubeDownloadManager dlManager, IConfigService configService, IDiskProvider diskProvider, IRemotePathMappingService remotePathMappingService, Logger logger) : base(configService, diskProvider, remotePathMappingService, logger)
+        {
+            _dlManager = dlManager;
+        }
 
         public override string Name => "Youtube";
-
-        public bool _tested = false;
 
         public override string Protocol => nameof(YoutubeDownloadProtocol);
 
@@ -45,6 +47,7 @@ namespace NzbDrone.Core.Download.Clients.YouTube
 
         protected override void Test(List<ValidationFailure> failures)
         {
+            _dlManager.SetCookies(Settings.CookiePath);
             StatusRequest req = new("https://music.youtube.com/", new WebRequestOptions<HttpResponseMessage>
             {
                 RequestFailed = (req, response) =>
@@ -53,13 +56,13 @@ namespace NzbDrone.Core.Download.Clients.YouTube
                 }
             });
 
-            TestFFmpeg(failures).Wait();
+            failures.AddIfNotNull(TestFFmpeg().Result);
             req.Wait();
         }
 
-        public async Task TestFFmpeg(List<ValidationFailure> failures)
+        public async Task<ValidationFailure> TestFFmpeg()
         {
-            if (Settings.ReEncode == ReEncodeOptions.UseFFmpegOrInstall)
+            if (Settings.ReEncode == (int)ReEncodeOptions.UseFFmpegOrInstall)
             {
                 if (!AudioMetadataHandler.FFmpegIsInstalled)
                 {
@@ -69,13 +72,14 @@ namespace NzbDrone.Core.Download.Clients.YouTube
                     }
                     catch (Exception ex)
                     {
-                        failures.Add(new ValidationFailure("FFmpegInstallation", $"Failed to install FFmpeg: {ex.Message}"));
+                        return new ValidationFailure("FFmpegInstallation", $"Failed to install FFmpeg: {ex.Message}");
                     }
                 }
             }
 
-            if (Settings.ReEncode == ReEncodeOptions.UseCustomFFmpeg && !AudioMetadataHandler.FFmpegIsInstalled)
-                failures.Add(new ValidationFailure("FFmpegPath", $"The specified FFmpeg path does not exist: {Settings.FFmpegPath}"));
+            if (Settings.ReEncode == (int)ReEncodeOptions.UseCustomFFmpeg && !AudioMetadataHandler.FFmpegIsInstalled)
+                return new ValidationFailure("FFmpegPath", $"The specified FFmpeg path does not exist: {Settings.FFmpegPath}");
+            return null!;
         }
     }
 }
