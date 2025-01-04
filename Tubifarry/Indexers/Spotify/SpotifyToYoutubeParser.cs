@@ -164,15 +164,22 @@ namespace NzbDrone.Core.Indexers.Spotify
                     if (firstTrack?.Id == null)
                         continue;
 
-                    StreamingData streamingData = await _ytClient.GetStreamingDataAsync(firstTrack.Id);
-                    AudioStreamInfo? highestAudioStreamInfo = streamingData.StreamInfo.OfType<AudioStreamInfo>().OrderByDescending(info => info.Bitrate).FirstOrDefault();
-
-                    if (highestAudioStreamInfo != null)
+                    try
                     {
-                        albumData.Duration = (long)album.Duration.TotalSeconds;
-                        albumData.Bitrate = RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
-                        albumData.AlbumId = result.Id;
-                        break;
+                        StreamingData streamingData = await _ytClient.GetStreamingDataAsync(firstTrack.Id);
+                        AudioStreamInfo? highestAudioStreamInfo = streamingData.StreamInfo.OfType<AudioStreamInfo>().OrderByDescending(info => info.Bitrate).FirstOrDefault();
+
+                        if (highestAudioStreamInfo != null)
+                        {
+                            albumData.Duration = (long)album.Duration.TotalSeconds;
+                            albumData.Bitrate = RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
+                            albumData.AlbumId = result.Id;
+                            break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, $"Failed to process track stream {firstTrack.Name} in album {albumData.AlbumName}");
                     }
                 }
             }

@@ -66,8 +66,9 @@ namespace NzbDrone.Download.Clients.YouTube
                 Chunks = provider.Settings.Chunks,
                 DelayBetweenAttemps = TimeSpan.FromSeconds(5),
                 NumberOfAttempts = 2,
+                LRCLIBInstance = provider.Settings.LRCLIBInstance,
                 UseID3v2_3 = provider.Settings.UseID3v2_3,
-                ReEncodeToMP3 = provider.Settings.ReEncode > 0,
+                ReEncodeOptions = (ReEncodeOptions)provider.Settings.ReEncode,
                 ClientInfo = DownloadClientItemClientInfo.FromDownloadClient(provider, false),
                 Logger = _logger,
             });

@@ -1,6 +1,4 @@
-﻿using DownloadAssistant.Options;
-using DownloadAssistant.Requests;
-using FluentValidation.Results;
+﻿using FluentValidation.Results;
 using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
@@ -48,21 +46,12 @@ namespace NzbDrone.Core.Download.Clients.YouTube
         protected override void Test(List<ValidationFailure> failures)
         {
             _dlManager.SetCookies(Settings.CookiePath);
-            StatusRequest req = new("https://music.youtube.com/", new WebRequestOptions<HttpResponseMessage>
-            {
-                RequestFailed = (req, response) =>
-                {
-                    failures.Add(new ValidationFailure("Connection", $"Failed to connect to YouTube Music. Status Code: {response?.StatusCode}"));
-                }
-            });
-
             failures.AddIfNotNull(TestFFmpeg().Result);
-            req.Wait();
         }
 
         public async Task<ValidationFailure> TestFFmpeg()
         {
-            if (Settings.ReEncode == (int)ReEncodeOptions.UseFFmpegOrInstall)
+            if (Settings.ReEncode != (int)ReEncodeOptions.Disabled)
             {
                 if (!AudioMetadataHandler.FFmpegIsInstalled)
                 {
@@ -76,9 +65,6 @@ namespace NzbDrone.Core.Download.Clients.YouTube
                     }
                 }
             }
-
-            if (Settings.ReEncode == (int)ReEncodeOptions.UseCustomFFmpeg && !AudioMetadataHandler.FFmpegIsInstalled)
-                return new ValidationFailure("FFmpegPath", $"The specified FFmpeg path does not exist: {Settings.FFmpegPath}");
             return null!;
         }
     }

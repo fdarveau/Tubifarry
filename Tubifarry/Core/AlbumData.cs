@@ -29,6 +29,9 @@ namespace Tubifarry.Core
         public int Bitrate { get; set; }
         public long Duration { get; set; }
 
+        //Not used
+        public AudioFormat Codec { get; set; } = AudioFormat.AAC;
+
         /// <summary>
         /// Converts AlbumData into a ReleaseInfo object.
         /// </summary>
@@ -42,7 +45,7 @@ namespace Tubifarry.Core
             PublishDate = ReleaseDateTime,
             DownloadProtocol = nameof(YoutubeDownloadProtocol),
             Title = ConstructTitle(),
-            Codec = "MP3",
+            Codec = Codec.ToString(),
             Resolution = CoverResolution,
             Source = CoverUrl,
             Container = Bitrate.ToString(),
@@ -76,7 +79,7 @@ namespace Tubifarry.Core
                 title += " [Explicit]";
 
             // Add the bitrate and source type
-            title += $" [MP3_{Bitrate}kbps] [WEB]";
+            title += $" [{Codec} {Bitrate}kbps] [WEB]";
 
             return title;
         }

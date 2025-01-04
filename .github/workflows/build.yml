@@ -77,12 +77,6 @@ jobs:
           else
             COMMIT_MESSAGES=$(git log $LAST_TAG..HEAD --pretty=format:"- %s")
           fi
-          if [ -z "$COMMIT_MESSAGES" ]; then
-            COMMIT_MESSAGES=$(git log --oneline $(git describe --tags --abbrev=0)@^..@ | sed 's/^/- /')
-          fi
-          if [ -z "$COMMIT_MESSAGES" ]; then
-            COMMIT_MESSAGES=$(git log --all --oneline | sed 's/^/- /')
-          fi
           echo "Commit messages: $COMMIT_MESSAGES"
           echo "COMMIT_MESSAGES<<EOF" >> $GITHUB_ENV
           echo "$COMMIT_MESSAGES" >> $GITHUB_ENV

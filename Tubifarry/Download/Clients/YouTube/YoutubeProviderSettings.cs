@@ -76,10 +76,10 @@ namespace NzbDrone.Core.Download.Clients.YouTube
         [FieldDefinition(6, Label = "File Chunk Count", Type = FieldType.Number, HelpText = "Number of chunks to split the download into. Each chunk is its own download. Note: Non-chunked downloads from YouTube are typically much slower.", Advanced = true)]
         public int Chunks { get; set; } = 2;
 
-        [FieldDefinition(7, Label = "ReEncode", Type = FieldType.Select, Placeholder = "Use or Install FFmpeg", SelectOptions = typeof(ReEncodeOptions), HelpText = "Specify whether to re-encode audio files and how to handle FFmpeg.")]
-        public int ReEncode { get; set; } = (int)ReEncodeOptions.UseFFmpegOrInstall;
+        [FieldDefinition(7, Label = "ReEncode", Type = FieldType.Select, SelectOptions = typeof(ReEncodeOptions), HelpText = "Specify whether to re-encode audio files and how to handle FFmpeg.", Advanced = true)]
+        public int ReEncode { get; set; } = (int)ReEncodeOptions.Disabled;
 
-        [FieldDefinition(8, Label = "FFmpeg Path", Type = FieldType.Path, Placeholder = "/downloads/FFmpeg", HelpText = "Specify the path to the FFmpeg binary. Not required if 'Disabled' is selected.", Advanced = false)]
+        [FieldDefinition(8, Label = "FFmpeg Path", Type = FieldType.Path, Placeholder = "/downloads/FFmpeg", HelpText = "Specify the path to the FFmpeg binary. Not required if 'Disabled' is selected.", Advanced = true)]
         public string FFmpegPath { get; set; } = string.Empty;
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));
@@ -87,13 +87,22 @@ namespace NzbDrone.Core.Download.Clients.YouTube
 
     public enum ReEncodeOptions
     {
-        [FieldOption(Label = "Disabled", Hint = "Do not re-encode files")]
+        [FieldOption(Label = "Disabled", Hint = "No re-encoding, keep original.")]
         Disabled,
 
-        [FieldOption(Label = "Use or Install FFmpeg", Hint = "Automatically download and use FFmpeg if not installed")]
-        UseFFmpegOrInstall,
+        [FieldOption(Label = "Only Extract", Hint = "Extract audio, no re-encoding.")]
+        OnlyExtract,
 
-        [FieldOption(Label = "Use Custom FFmpeg", Hint = "Specify a custom FFmpeg executable path")]
-        UseCustomFFmpeg
+        [FieldOption(Label = "AAC", Hint = "Re-encode to AAC (VBR).")]
+        AAC,
+
+        [FieldOption(Label = "MP3", Hint = "Re-encode to MP3 (VBR).")]
+        MP3,
+
+        [FieldOption(Label = "Opus", Hint = "Re-encode to Opus (VBR).")]
+        Opus,
+
+        [FieldOption(Label = "Vorbis", Hint = "Re-encode to Vorbis (fixed 224 kbps).")]
+        Vorbis
     }
 }

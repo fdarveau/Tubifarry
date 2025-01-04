@@ -1,7 +1,7 @@
 # Tubifarry for Lidarr 🎶  
 ![Downloads](https://img.shields.io/github/downloads/TypNull/Tubifarry/total)  ![GitHub release (latest by date)](https://img.shields.io/github/v/release/TypNull/Tubifarry)  ![GitHub last commit](https://img.shields.io/github/last-commit/TypNull/Tubifarry)  ![License](https://img.shields.io/github/license/TypNull/Tubifarry)  ![GitHub stars](https://img.shields.io/github/stars/TypNull/Tubifarry)  
 
-Tubifarry is a plugin for **Lidarr** that fetches metadata from **Spotify** and **YouTube**, enabling direct music downloads from YouTube. Built on the foundation of trevTV's projects, it leverages the YouTube API for smooth integration. 🛠️  
+Tubifarry is a plugin for **Lidarr** that fetches metadata from **Spotify** and **YouTube**, enabling direct music downloads from YouTube. Built on the foundation of trevTV's projects, it leverages the YouTube API for seamless integration. 🛠️  
 
 ---
 
@@ -23,18 +23,6 @@ To switch to the Plugins Branch:
 
 ---
 
-### Prerequisites ⚙️  
-1. **FFmpeg**: FFmpeg is **essential** for converting downloaded files to MP3 format. Ensure FFmpeg is installed and accessible in your system's PATH or the specified FFmpeg path. If not, you can attempt to download it automatically during setup. Without FFmpeg, many songs may fail to process correctly, as they are downloaded as MP4 files, and TagLib cannot add metadata to MP4 formats.  
-
-2. **Max Audio Quality**: Tubifarry supports a maximum audio quality of **256kb/s** for downloaded files. However, most files are in **MP3-VBR-V0** format.  
-
-   **What is MP3-VBR-V0?**  
-   MP3-VBR-V0 is a high-quality audio format that uses **Variable Bitrate (VBR)** to optimize both sound quality and file size. Unlike a fixed bitrate (e.g., 128kb/s), VBR adjusts the bitrate dynamically based on the complexity of the audio. For example, it uses a higher bitrate for detailed parts of a song (like a chorus) and a lower bitrate for simpler parts (like silence).  
-
-   **Note**: For higher-quality audio (e.g., 256kb/s), you need a **YouTube Premium subscription**.  
-
----
-
 ### Plugin Installation 📥  
 
 #### **For Docker Users**:  
@@ -50,14 +38,27 @@ To switch to the Plugins Branch:
    - Go to `Settings -> Download Clients` and click **Add**.  
    - In the modal, choose `Youtube` (under **Other** at the bottom).  
    - Set the download path and adjust other settings as needed.  
-   - **Important**: Ensure the FFmpeg path is correctly configured!  
+   - **Optional**: If using FFmpeg, ensure the FFmpeg path is correctly configured.  
+
+---
+
+### Optional: FFmpeg and Audio Quality 🎧  
+1. **FFmpeg**: FFmpeg can be used to extract audio from downloaded files, which are typically embedded in MP4 containers. If you choose to use FFmpeg, ensure it is installed and accessible in your system's PATH or the specified FFmpeg path. If not, the plugin does attempt to download it automatically during setup. Without FFmpeg, songs will be downloaded in their original format, which may not require additional processing.  
+
+   **Important Note**: If FFmpeg is not used, Lidarr may incorrectly interpret the MP4 container as corrupt. While FFmpeg usage is **recommended**, it is not strictly necessary. However, to avoid potential issues, you can choose to extract audio without re-encoding, but this may lead to better compatibility with Lidarr.
+
+2. **Max Audio Quality**: Tubifarry supports a maximum audio quality of **256kb/s AAC** for downloaded files through YouTube. While most files are in 128kbps AAC by default, they can be converted to higher-quality formats like **AAC, Opus or MP3v2** if FFmpeg is used.  
+
+   **What is AAC?**  
+   AAC (Advanced Audio Coding) is a high-quality audio format that offers better sound quality than MP3 at similar bitrates. It is commonly used in MP4 containers, making it a versatile and widely supported format.  
+
+   **Note**: For higher-quality audio (e.g., 256kb/s), you need a **YouTube Premium subscription**.  
 
 ---
 
 ### Troubleshooting 🛠️  
-- **FFmpeg Issues**: If songs fail to process, verify that FFmpeg is correctly installed and accessible in your system's PATH. If not, try reinstalling or downloading it manually.  
-- **MP4 Metadata**: If metadata is not being added to downloaded files, confirm that FFmpeg is converting files to MP3 format (check debug logs). MP4 files are not supported for metadata tagging by TagLib.  
-- **Audio Quality**: Ensure the maximum audio quality is set to **128 kb/s** in your settings to avoid compatibility issues.  
+- **Optional: FFmpeg Issues**: If you choose to use FFmpeg and songs fail to process, verify that FFmpeg is correctly installed and accessible in your system's PATH. If not, try reinstalling or downloading it manually.  
+- **Metadata Issues**: If metadata is not being added to downloaded files, confirm that the files are in a supported format. If using FFmpeg, ensure it is extracting audio to formats like AAC embedded in MP4 containers (check debug logs).  
 - **No Release Found**: If no release is found, YouTube might flag the plugin as a bot (which it technically is). To avoid this and access higher-quality audio, you can log in using cookies.  
   - **Steps to Use Cookies**:  
     1. Install the **cookies.txt** extension for your browser:  

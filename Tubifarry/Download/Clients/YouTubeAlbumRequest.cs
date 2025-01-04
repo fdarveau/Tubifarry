@@ -4,6 +4,7 @@ using DownloadAssistant.Requests;
 using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Core.Download;
+using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Parser.Model;
 using Requests;
 using Requests.Options;
@@ -63,7 +64,6 @@ namespace Tubifarry.Download.Clients
         {
             _requestContainer.Add(new OwnRequest(async (token) =>
             {
-                Directory.CreateDirectory(_destinationPath.FullPath);
                 string albumBrowseID = await Options.YouTubeMusicClient!.GetAlbumBrowseIdAsync(_releaseInfo.DownloadUrl, token);
                 AlbumInfo albumInfo = await Options.YouTubeMusicClient.GetAlbumInfoAsync(albumBrowseID, token);
                 if (albumInfo?.Songs == null || !albumInfo.Songs.Any())
@@ -83,17 +83,24 @@ namespace Tubifarry.Download.Clients
                         Logger?.Debug($"Skipping track '{trackInfo.Name}' in album '{_releaseInfo.Album}' because it has no valid download URL.");
                         continue;
                     }
-
-                    StreamingData streamingData = await Options.YouTubeMusicClient.GetStreamingDataAsync(trackInfo.Id, token);
-                    AudioStreamInfo? highestAudioStreamInfo = streamingData.StreamInfo.OfType<AudioStreamInfo>().OrderByDescending(info => info.Bitrate).FirstOrDefault();
-                    if (highestAudioStreamInfo == null)
+                    try
                     {
-                        _message.AppendLine($"Skipping track '{trackInfo.Name}' in album '{_releaseInfo.Album}' because no audio stream was found.");
-                        Logger?.Debug($"Skipping track '{trackInfo.Name}' in album '{_releaseInfo.Album}' because no audio stream was found.");
-                        continue;
+                        StreamingData streamingData = await Options.YouTubeMusicClient.GetStreamingDataAsync(trackInfo.Id, token);
+                        AudioStreamInfo? highestAudioStreamInfo = streamingData.StreamInfo.OfType<AudioStreamInfo>().OrderByDescending(info => info.Bitrate).FirstOrDefault();
+                        if (highestAudioStreamInfo == null)
+                        {
+                            _message.AppendLine($"Skipping track '{trackInfo.Name}' in album '{_releaseInfo.Album}' because no audio stream was found.");
+                            Logger?.Debug($"Skipping track '{trackInfo.Name}' in album '{_releaseInfo.Album}' because no audio stream was found.");
+                            continue;
+                        }
+                        AddTrackDownloadRequests(albumInfo, trackInfo, highestAudioStreamInfo);
+                    }
+                    catch (Exception ex)
+                    {
+                        _message.AppendLine($"Failed to process track '{trackInfo.Name}' in album '{_releaseInfo.Album}'");
+                        Logger?.Error(ex, $"Failed to process track '{trackInfo.Name}' in album '{_releaseInfo.Album}'.");
                     }
 
-                    AddTrackDownloadRequests(albumInfo, trackInfo, highestAudioStreamInfo);
                 }
                 return true;
             }, new()
@@ -134,7 +141,7 @@ namespace Tubifarry.Download.Clients
                 SpeedReporterTimeout = 1,
                 Priority = RequestPriority.Normal,
                 DelayBetweenAttemps = Options.DelayBetweenAttemps,
-                Filename = $"{trackInfo.SongNumber} - {trackInfo.Name}.mp3",
+                Filename = $"{trackInfo.SongNumber} - {trackInfo.Name}.m4a",
                 DestinationPath = _destinationPath.FullPath,
                 Handler = Options.Handler,
                 DeleteFilesOnFailure = true,
@@ -154,19 +161,18 @@ namespace Tubifarry.Download.Clients
                 DelayBetweenAttemps = Options.DelayBetweenAttemps,
                 Handler = Options.Handler,
                 RequestFailed = (req, path) =>
-                {
-                    _message.AppendLine($"Post-processing for track '{trackInfo.Name}' in album '{albumInfo.Name}' failed.");
-                    Logger?.Debug($"Post-processing for track '{trackInfo.Name}' in album '{albumInfo.Name}' failed.");
-                    try
-                    {
-                        if (File.Exists(downloadingReq.Destination))
-                            File.Delete(downloadingReq.Destination);
-                    }
-                    catch (Exception) { }
-                },
+                 {
+                     _message.AppendLine($"Post-processing for track '{trackInfo.Name}' in album '{albumInfo.Name}' failed.");
+                     Logger?.Debug($"Post-processing for track '{trackInfo.Name}' in album '{albumInfo.Name}' failed.");
+                     try
+                     {
+                         if (File.Exists(downloadingReq.Destination))
+                             File.Delete(downloadingReq.Destination);
+                     }
+                     catch (Exception) { }
+                 },
                 CancellationToken = Token
             });
-
             downloadingReq.TrySetSubsequentRequest(postProcessReq);
 
             _ = postProcessReq.TrySetIdle();
@@ -186,15 +192,18 @@ namespace Tubifarry.Download.Clients
             if (Options.TryIncludeLrc)
                 audioData.Lyric = await Lyric.FetchLyricsFromLRCLIBAsync(Options.LRCLIBInstance, _releaseInfo, trackInfo, token);
 
-            if (Options.ReEncodeToMP3)
-                await audioData.TryConvertToMP3();
+            AudioFormat format = AudioFormatHelper.ConvertOptionToAudioFormat(Options.ReEncodeOptions);
 
-            if (!audioData.TryEmbedMetadataInTrack(albumInfo, trackInfo, _releaseInfo))
+            if (Options.ReEncodeOptions == ReEncodeOptions.OnlyExtract)
+                await audioData.TryExtractAudioFromVideoAsync();
+            else if (format != AudioFormat.Unknown)
+                await audioData.TryConvertToFormatAsync(format);
+
+            if (!audioData.TryEmbedMetadata(albumInfo, trackInfo, _releaseInfo))
                 return false;
 
             if (Options.TryIncludeSycLrc)
                 await audioData.TryCreateLrcFileAsync(token);
-
             GetRemainingTime();
             return true;
         }

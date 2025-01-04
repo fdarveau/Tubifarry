@@ -1,5 +1,6 @@
 ﻿using NLog;
 using NzbDrone.Core.Download;
+using NzbDrone.Core.Download.Clients.YouTube;
 using Requests.Options;
 using YouTubeMusicAPI.Client;
 
@@ -23,7 +24,7 @@ namespace Tubifarry.Download.Clients
 
         public int Chunks { get; set; } = 2;
 
-        public bool ReEncodeToMP3 { get; set; }
+        public ReEncodeOptions ReEncodeOptions { get; set; }
 
         public bool UseID3v2_3 { get; set; }
 
@@ -38,7 +39,7 @@ namespace Tubifarry.Download.Clients
             TryIncludeLrc = options.TryIncludeLrc;
             Chunks = options.Chunks;
             UseID3v2_3 = options.UseID3v2_3;
-            ReEncodeToMP3 = options.ReEncodeToMP3;
+            ReEncodeOptions = options.ReEncodeOptions;
             LRCLIBInstance = options.LRCLIBInstance;
             DownloadPath = options.DownloadPath;
         }

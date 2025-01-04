@@ -8,21 +8,160 @@ namespace Tubifarry.Core
 {
     internal class AudioMetadataHandler
     {
-        private readonly string _trackPath;
         private readonly Logger? _logger;
+
+        public string TrackPath { get; private set; }
         public Lyric? Lyric { get; set; }
         public byte[]? AlbumCover { get; set; }
-        public string FileType { get; }
-
         public bool UseID3v2_3 { get; set; }
+
 
         public AudioMetadataHandler(string originalPath, Logger? logger)
         {
-            _trackPath = originalPath;
+            TrackPath = originalPath;
             _logger = logger;
-            FileType = DetectFileType();
         }
 
+
+        private static readonly Dictionary<AudioFormat, string[]> ConversionParameters = new()
+        {
+            { AudioFormat.AAC, new[] { "-codec:a aac", "-q:a 0", "-movflags +faststart" } },
+            { AudioFormat.MP3, new[] { "-codec:a libmp3lame", "-q:a 0", "-preset insane" } },
+            { AudioFormat.Opus, new[] { "-codec:a libopus", "-vbr on", "-compression_level 10", "-application audio" } },
+            { AudioFormat.Vorbis, new[] { "-codec:a libvorbis", "-q:a 7" } },
+            { AudioFormat.FLAC, new[] { "-codec:a flac" } },
+            { AudioFormat.WAV, new[] { "-codec:a pcm_s16le" } }
+        };
+
+        private static readonly string[] ExtractionParameters = new[]
+{
+            "-codec:a copy",
+            "-vn",
+            "-movflags +faststart"
+        };
+
+        private static readonly Dictionary<string, byte[]> VideoSignatures = new()
+        {
+            { "MP4", new byte[] { 0x66, 0x74, 0x79, 0x70 } }, // MP4 (ftyp)
+            { "AVI", new byte[] { 0x52, 0x49, 0x46, 0x46 } }, // AVI (RIFF)
+            { "MKV", new byte[] { 0x1A, 0x45, 0xDF, 0xA3 } }, // MKV (EBML)
+        };
+
+        public async Task<bool> TryConvertToFormatAsync(AudioFormat audioFormat)
+        {
+            if (!FFmpegIsInstalled)
+                return false;
+
+            if (!await TryExtractAudioFromVideoAsync())
+                return false;
+
+            if (audioFormat == AudioFormat.Unknown)
+                return true;
+
+            if (!ConversionParameters.ContainsKey(audioFormat))
+                return false;
+
+            string finalOutputPath = Path.ChangeExtension(TrackPath, AudioFormatHelper.GetFileExtensionForFormat(audioFormat));
+            string tempOutputPath = Path.ChangeExtension(TrackPath, $".converted{AudioFormatHelper.GetFileExtensionForFormat(audioFormat)}");
+
+            try
+            {
+                if (File.Exists(tempOutputPath))
+                    File.Delete(tempOutputPath);
+
+                IConversion conversion = await FFmpeg.Conversions.FromSnippet.Convert(TrackPath, tempOutputPath);
+                foreach (string parameter in ConversionParameters[audioFormat])
+                    conversion.AddParameter(parameter);
+
+                await conversion.Start();
+
+                if (File.Exists(TrackPath))
+                    File.Delete(TrackPath);
+
+                File.Move(tempOutputPath, finalOutputPath, true);
+                TrackPath = finalOutputPath;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, $"Failed to convert file to {audioFormat}: {TrackPath}");
+                return false;
+            }
+        }
+
+        public async Task<bool> IsVideoContainerAsync()
+        {
+            try
+            {
+                IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(TrackPath);
+                if (mediaInfo.VideoStreams.Any())
+                    return true;
+
+                byte[] header = new byte[8];
+                using (FileStream stream = new(TrackPath, FileMode.Open, FileAccess.Read))
+                {
+                    await stream.ReadAsync(header);
+                }
+
+                foreach (KeyValuePair<string, byte[]> kvp in VideoSignatures)
+                {
+                    string containerType = kvp.Key;
+                    byte[] signature = kvp.Value;
+                    if (header.Skip(4).Take(signature.Length).SequenceEqual(signature))
+                        return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, $"Failed to check file header: {TrackPath}");
+                return false;
+            }
+        }
+
+        public async Task<bool> TryExtractAudioFromVideoAsync()
+        {
+            if (!FFmpegIsInstalled)
+                return false;
+
+            bool isVideo = await IsVideoContainerAsync();
+            if (!isVideo)
+                return true;
+
+            try
+            {
+                IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(TrackPath);
+                IAudioStream? audioStream = mediaInfo.AudioStreams.FirstOrDefault();
+
+                if (audioStream == null)
+                    return false;
+
+                string codec = audioStream.Codec.ToLower();
+                string finalOutputPath = Path.ChangeExtension(TrackPath, AudioFormatHelper.GetFileExtensionForCodec(codec));
+                string tempOutputPath = Path.ChangeExtension(TrackPath, $".extracted{AudioFormatHelper.GetFileExtensionForCodec(codec)}");
+
+                if (File.Exists(tempOutputPath))
+                    File.Delete(tempOutputPath);
+
+                IConversion conversion = await FFmpeg.Conversions.FromSnippet.ExtractAudio(TrackPath, tempOutputPath);
+                foreach (string parameter in ExtractionParameters)
+                    conversion.AddParameter(parameter);
+
+                await conversion.Start();
+
+                if (File.Exists(TrackPath))
+                    File.Delete(TrackPath);
+
+                File.Move(tempOutputPath, finalOutputPath, true);
+                TrackPath = finalOutputPath;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger?.Error(ex, $"Failed to extract audio from MP4: {TrackPath}");
+                return false;
+            }
+        }
 
         public async Task<bool> TryCreateLrcFileAsync(CancellationToken token)
         {
@@ -33,19 +172,45 @@ namespace Tubifarry.Core
                 string lrcContent = string.Join(Environment.NewLine, Lyric.SyncedLyrics
                     .Where(lyric => !string.IsNullOrEmpty(lyric.LrcTimestamp) && !string.IsNullOrEmpty(lyric.Line))
                     .Select(lyric => $"{lyric.LrcTimestamp} {lyric.Line}"));
-                await File.WriteAllTextAsync(Path.ChangeExtension(_trackPath, ".lrc"), lrcContent, token);
+                await File.WriteAllTextAsync(Path.ChangeExtension(TrackPath, ".lrc"), lrcContent, token);
             }
             catch (Exception) { return false; }
             return true;
         }
 
-        public bool IsMP3() => FileType == "MP3";
-
-        public bool TryEmbedMetadataInTrack(AlbumInfo albumInfo, AlbumSongInfo trackInfo, ReleaseInfo releaseInfo)
+        /// <summary>
+        /// Ensures the file extension matches the actual audio codec.
+        /// </summary>
+        /// <returns>True if the file extension is correct or was successfully corrected; otherwise, false.</returns>
+        public async Task<bool> EnsureFileExtAsync()
         {
             try
             {
-                using TagLib.File file = TagLib.File.Create(_trackPath);
+                IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(TrackPath);
+                string codec = mediaInfo.AudioStreams.FirstOrDefault()?.Codec.ToLower() ?? string.Empty;
+                if (string.IsNullOrEmpty(codec))
+                    return false;
+
+                string correctExtension = AudioFormatHelper.GetFileExtensionForCodec(codec);
+                string currentExtension = Path.GetExtension(TrackPath);
+
+                if (!string.Equals(currentExtension, correctExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    string newPath = Path.ChangeExtension(TrackPath, correctExtension);
+                    File.Move(TrackPath, newPath);
+                    TrackPath = newPath;
+                }
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
+
+
+        public bool TryEmbedMetadata(AlbumInfo albumInfo, AlbumSongInfo trackInfo, ReleaseInfo releaseInfo)
+        {
+            try
+            {
+                using TagLib.File file = TagLib.File.Create(TrackPath);
 
                 if (UseID3v2_3)
                 {
@@ -64,25 +229,20 @@ namespace Tubifarry.Core
                 if (trackInfo.SongNumber.HasValue)
                     file.Tag.Track = (uint)trackInfo.SongNumber.Value;
 
-
                 if (albumInfo.SongCount > 0)
                     file.Tag.TrackCount = (uint)albumInfo.SongCount;
-
 
                 if (!string.IsNullOrEmpty(releaseInfo.Album))
                     file.Tag.Album = releaseInfo.Album;
 
-
                 if (releaseInfo.PublishDate.Year > 0)
                     file.Tag.Year = (uint)releaseInfo.PublishDate.Year;
-
 
                 if (!string.IsNullOrEmpty(releaseInfo.Artist))
                 {
                     file.Tag.AlbumArtists = albumInfo.Artists.Select(x => x.Name).ToArray();
                     file.Tag.Performers = new[] { releaseInfo.Artist };
                 }
-
 
                 if (trackInfo.IsExplicit)
                     file.Tag.Comment = "EXPLICIT";
@@ -94,7 +254,7 @@ namespace Tubifarry.Core
                 }
                 catch (Exception ex)
                 {
-                    _logger?.Error(ex, $"Failed to embed cover in track: {_trackPath}");
+                    _logger?.Error(ex, $"Failed to embed cover in track: {TrackPath}");
                 }
 
                 if (!string.IsNullOrEmpty(Lyric?.PlainLyrics))
@@ -104,95 +264,10 @@ namespace Tubifarry.Core
             }
             catch (Exception ex)
             {
-                _logger?.Error(ex, $"Failed to embed metadata in track: {_trackPath}");
+                _logger?.Error(ex, $"Failed to embed metadata in track: {TrackPath}");
                 return false;
             }
             return true;
-        }
-
-        public async Task<bool> TryConvertToMP3()
-        {
-            if (IsMP3())
-            {
-                _logger?.Error($"retrun true");
-                return true;
-            }
-
-            try
-            {
-                string? convertedPath = await ConvertToMp3Async();
-
-                if (convertedPath == null)
-                {
-                    _logger?.Error($"Failed to convert {FileType} file to MP3: {_trackPath}");
-                    return false;
-                }
-                File.Move(convertedPath, _trackPath, true);
-                return true;
-            }
-            catch (Exception) { return false; }
-        }
-
-        private string DetectFileType()
-        {
-            try
-            {
-                using FileStream stream = new(_trackPath, FileMode.Open, FileAccess.Read);
-                byte[] buffer = new byte[12]; // Read the first 12 bytes for most signatures
-                stream.Read(buffer, 0, buffer.Length);
-
-                // Check for MP3 (ID3 tag)
-                if (buffer[0] == 'I' && buffer[1] == 'D' && buffer[2] == '3')
-                    return "MP3";
-
-                // Check for MP3 (MPEG frame)
-                if (buffer[0] == 0xFF && (buffer[1] & 0xE0) == 0xE0)
-                    return "MP3";
-
-                // Check for WAV (RIFF header)
-                if (buffer[0] == 'R' && buffer[1] == 'I' && buffer[2] == 'F' && buffer[3] == 'F')
-                    return "WAV";
-
-                // Check for AIFF (FORM header)
-                if (buffer[0] == 'F' && buffer[1] == 'O' && buffer[2] == 'R' && buffer[3] == 'M')
-                    return "AIFF";
-
-                // Check for FLAC (fLaC header)
-                if (buffer[0] == 'f' && buffer[1] == 'L' && buffer[2] == 'a' && buffer[3] == 'C')
-                    return "FLAC";
-
-                // Check for AAC (ADTS frame)
-                if (buffer[0] == 0xFF && (buffer[1] == 0xF1 || buffer[1] == 0xF9))
-                    return "AAC";
-
-                // Check for OGG (OggS header)
-                if (buffer[0] == 'O' && buffer[1] == 'g' && buffer[2] == 'g' && buffer[3] == 'S')
-                    return "OGG";
-
-                // Check for MP4 (ftyp header)
-                if (buffer[4] == 'f' && buffer[5] == 't' && buffer[6] == 'y' && buffer[7] == 'p')
-                    return "MP4";
-
-                // Check for MIDI (MThd header)
-                if (buffer[0] == 'M' && buffer[1] == 'T' && buffer[2] == 'h' && buffer[3] == 'd')
-                    return "MIDI";
-
-                // Check for AMR (#!AMR header)
-                if (buffer[0] == '#' && buffer[1] == '!' && buffer[2] == 'A' && buffer[3] == 'M' && buffer[4] == 'R')
-                    return "AMR";
-
-                // Check for WMA (ASF header)
-                if (buffer[0] == 0x30 && buffer[1] == 0x26 && buffer[2] == 0xB2 && buffer[3] == 0x75 &&
-                    buffer[4] == 0x8E && buffer[5] == 0x66 && buffer[6] == 0xCF && buffer[7] == 0x11)
-                    return "WMA";
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error($"Error reading file: {ex.Message}");
-                return "Unknown";
-            }
-
-            return "Unknown";
         }
 
         public static bool FFmpegIsInstalled => !string.IsNullOrEmpty(FFmpeg.ExecutablesPath) && Directory.GetFiles(FFmpeg.ExecutablesPath, "ffmpeg.*").Any();
@@ -201,31 +276,6 @@ namespace Tubifarry.Core
         {
             FFmpeg.SetExecutablesPath(path);
             return FFmpegIsInstalled ? Task.CompletedTask : FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, path);
-
-        }
-
-        private async Task<string?> ConvertToMp3Async()
-        {
-            if (!FFmpegIsInstalled)
-                return null;
-            string outputPath = Path.ChangeExtension(_trackPath, ".converted.mp3");
-
-            try
-            {
-                IConversion conversion = await FFmpeg.Conversions.FromSnippet.Convert(_trackPath, outputPath);
-                conversion.AddParameter("-codec:a libmp3lame");
-                conversion.AddParameter("-q:a 0");
-                conversion.AddParameter("-preset insane");
-
-                await conversion.Start();
-                _logger?.Debug($"Successfully converted file to MP3: {outputPath}");
-                return outputPath;
-            }
-            catch (Exception ex)
-            {
-                _logger?.Error(ex, $"Failed to convert file to MP3: {_trackPath}");
-                return null;
-            }
         }
     }
 }
