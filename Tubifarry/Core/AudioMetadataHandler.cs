@@ -1,4 +1,5 @@
 ﻿using NLog;
+using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Parser.Model;
 using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
@@ -16,10 +17,10 @@ namespace Tubifarry.Core
         public bool UseID3v2_3 { get; set; }
 
 
-        public AudioMetadataHandler(string originalPath, Logger? logger)
+        public AudioMetadataHandler(string originalPath)
         {
             TrackPath = originalPath;
-            _logger = logger;
+            _logger = NzbDroneLogger.GetLogger(this); ;
         }
 
 

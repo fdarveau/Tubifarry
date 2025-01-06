@@ -34,9 +34,8 @@ public class ReleaseFormatter
 
     public string BuildArtistFolderName(string? pattern)
     {
-        // Fall back to the ArtistFolderFormat if no pattern is provided
         pattern ??= _namingConfig?.ArtistFolderFormat ?? "{Artist Name}";
-        Dictionary<string, Func<string>> tokenHandlers = GetTokenHandlers(null, null); // No track or album tokens for artist folder names
+        Dictionary<string, Func<string>> tokenHandlers = GetTokenHandlers(null, null);
         string formattedString = ReplaceTokens(pattern, tokenHandlers);
         return CleanFileName(formattedString);
     }
@@ -72,8 +71,8 @@ public class ReleaseFormatter
             { "{Track ArtistName}", () => _artist?.Name ?? string.Empty },
             { "{Track ArtistNameThe}", () => TitleThe(_artist?.Name) },
             { "{Track ArtistMbId}", () => _artist?.ForeignArtistId ?? string.Empty },
-            { "{track:0}", () => FormatTrackNumber(track?.TrackNumber, "0") }, // Zero-padded single digit
-            { "{track:00}", () => FormatTrackNumber(track?.TrackNumber, "00") }, // Zero-padded two digits
+            { "{track:0}", () => FormatTrackNumber(track?.TrackNumber, "0") },
+            { "{track:00}", () => FormatTrackNumber(track?.TrackNumber, "00") },
 
             // Medium Tokens (only added if track is provided)
             { "{Medium Name}", () => track?.AlbumRelease?.Value?.Media?.FirstOrDefault(m => m.Number == track.MediumNumber)?.Name ?? string.Empty },
@@ -91,7 +90,7 @@ public class ReleaseFormatter
         if (tokenHandlers.TryGetValue($"{{{token}}}", out Func<string>? handler))
             return handler();
 
-        return string.Empty; // Remove unknown tokens
+        return string.Empty;
     });
 
     private string CleanFileName(string fileName)
@@ -101,7 +100,6 @@ public class ReleaseFormatter
         char[] invalidChars = invalidFileNameChars.Union(invalidPathChars).ToArray();
         fileName = invalidChars.Aggregate(fileName, (current, invalidChar) => current.Replace(invalidChar.ToString(), string.Empty));
 
-        // Handle colon replacement based on the naming config
         switch (_namingConfig?.ColonReplacementFormat)
         {
             case ColonReplacementFormat.Delete:

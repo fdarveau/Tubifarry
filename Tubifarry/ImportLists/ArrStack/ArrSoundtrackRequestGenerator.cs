@@ -1,17 +1,14 @@
-﻿using NLog;
-using NzbDrone.Common.Http;
+﻿using NzbDrone.Common.Http;
 
 namespace NzbDrone.Core.ImportLists.ArrStack
 {
     internal class ArrSoundtrackRequestGenerator : IImportListRequestGenerator
     {
         public ArrSoundtrackImportSettings Settings { get; set; }
-        public Logger Logger { get; set; }
 
-        public ArrSoundtrackRequestGenerator(ArrSoundtrackImportSettings settings, Logger logger)
+        public ArrSoundtrackRequestGenerator(ArrSoundtrackImportSettings settings)
         {
             Settings = settings;
-            Logger = logger;
         }
 
         public ImportListPageableRequestChain GetListItems()

@@ -1,5 +1,4 @@
-﻿using NLog;
-using NzbDrone.Core.Download;
+﻿using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Organizer;
 using Requests.Options;
@@ -10,8 +9,6 @@ namespace Tubifarry.Download.Clients
     public record YouTubeAlbumOptions : RequestOptions<string, string>
     {
         public YouTubeMusicClient? YouTubeMusicClient { get; set; }
-
-        public Logger? Logger { get; set; }
 
         public DownloadClientItemClientInfo? ClientInfo { get; set; }
 
@@ -36,7 +33,6 @@ namespace Tubifarry.Download.Clients
         protected YouTubeAlbumOptions(YouTubeAlbumOptions options) : base(options)
         {
             YouTubeMusicClient = options.YouTubeMusicClient;
-            Logger = options.Logger;
             ClientInfo = options.ClientInfo;
             TryIncludeSycLrc = options.TryIncludeSycLrc;
             TryIncludeLrc = options.TryIncludeLrc;

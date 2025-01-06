@@ -25,7 +25,6 @@ namespace Tubifarry.Core
 
             if (cachedData == null || DateTime.UtcNow - cachedData.CreatedAt > cachedData.ExpirationDuration)
             {
-                // Cache is expired or invalid, delete the file
                 File.Delete(cacheFilePath);
                 return default;
             }
@@ -44,7 +43,9 @@ namespace Tubifarry.Core
                 ExpirationDuration = expirationDuration
             };
 
-            string json = JsonSerializer.Serialize(cachedData);
+            JsonSerializerOptions options = new() { WriteIndented = true };
+
+            string json = JsonSerializer.Serialize(cachedData, options);
             await File.WriteAllTextAsync(cacheFilePath, json);
         }
 

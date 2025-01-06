@@ -42,7 +42,7 @@ namespace NzbDrone.Download.Clients.YouTube
             _logger = logger;
             _queue = new();
             _ytClient = new YouTubeMusicClient();
-            _logger.Debug("Initialized");
+            _logger.Trace("Initialized");
         }
 
         public void SetCookies(string path)
@@ -71,11 +71,10 @@ namespace NzbDrone.Download.Clients.YouTube
                 LRCLIBInstance = provider.Settings.LRCLIBInstance,
                 UseID3v2_3 = provider.Settings.UseID3v2_3,
                 ReEncodeOptions = (ReEncodeOptions)provider.Settings.ReEncode,
-                ClientInfo = DownloadClientItemClientInfo.FromDownloadClient(provider, false),
-                Logger = _logger,
+                ClientInfo = DownloadClientItemClientInfo.FromDownloadClient(provider, false)
             });
             _queue.Add(request);
-            _logger.Debug($"Download request added to queue. Request ID: {request.ID}");
+            _logger.Trace($"Download request added to queue. Request ID: {request.ID}");
             return Task.FromResult(request.ID);
         }
 
@@ -88,7 +87,7 @@ namespace NzbDrone.Download.Clients.YouTube
                 return;
             req.Dispose();
             _queue.Remove(req);
-            _logger.Debug($"Item removed from queue. Download ID: {item.DownloadId}");
+            _logger.Trace($"Item removed from queue. Download ID: {item.DownloadId}");
         }
     }
 }

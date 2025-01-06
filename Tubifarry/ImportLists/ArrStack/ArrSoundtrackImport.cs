@@ -30,9 +30,9 @@ namespace NzbDrone.Core.ImportLists.ArrStack
 
         public ArrSoundtrackImport(IHttpClient httpClient, IImportListStatusService importListStatusService, IConfigService configService, IParsingService parsingService, Logger logger) : base(httpClient, importListStatusService, configService, parsingService, logger) { }
 
-        public override IImportListRequestGenerator GetRequestGenerator() => _generator ??= new ArrSoundtrackRequestGenerator(Settings, _logger);
+        public override IImportListRequestGenerator GetRequestGenerator() => _generator ??= new ArrSoundtrackRequestGenerator(Settings);
 
-        public override IParseImportListResponse GetParser() => _parser ??= new ArrSoundtrackImportParser(Settings, _logger, _httpClient);
+        public override IParseImportListResponse GetParser() => _parser ??= new ArrSoundtrackImportParser(Settings, _httpClient);
 
         protected override void Test(List<ValidationFailure> failures)
         {

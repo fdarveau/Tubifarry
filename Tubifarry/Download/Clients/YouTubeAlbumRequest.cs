@@ -3,6 +3,7 @@ using DownloadAssistant.Options;
 using DownloadAssistant.Requests;
 using NLog;
 using NzbDrone.Common.Disk;
+using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Music;
@@ -28,13 +29,13 @@ namespace Tubifarry.Download.Clients
         private readonly Album _albumData;
         private readonly DownloadClientItem _clientItem;
         private readonly ReleaseFormatter _releaseFormatter;
+        private readonly Logger _logger;
 
         private DateTime _lastUpdateTime = DateTime.MinValue;
         private long _lastRemainingSize = 0;
         private byte[]? _albumCover;
 
         private ReleaseInfo ReleaseInfo => _remoteAlbum.Release;
-        private Logger? Logger => Options.Logger;
 
         public override Task Task => _requestContainer.Task;
         public override RequestState State => _requestContainer.State;
@@ -57,6 +58,7 @@ namespace Tubifarry.Download.Clients
         public YouTubeAlbumRequest(RemoteAlbum remoteAlbum, YouTubeAlbumOptions? options) : base(options)
         {
             Options.YouTubeMusicClient ??= new YouTubeMusicClient();
+            _logger = NzbDroneLogger.GetLogger(this);
             _remoteAlbum = remoteAlbum;
             _albumData = remoteAlbum.Albums.FirstOrDefault() ?? new();
             _releaseFormatter = new(ReleaseInfo, remoteAlbum.Artist, Options.NameingConfig);
@@ -86,7 +88,7 @@ namespace Tubifarry.Download.Clients
         {
             string albumBrowseID = await Options.YouTubeMusicClient!.GetAlbumBrowseIdAsync(ReleaseInfo.DownloadUrl, token).ConfigureAwait(false);
             AlbumInfo albumInfo = await Options.YouTubeMusicClient.GetAlbumInfoAsync(albumBrowseID, token).ConfigureAwait(false);
-            Logger.Info(Options.NameingConfig.StandardTrackFormat);
+            _logger.Info(Options.NameingConfig.StandardTrackFormat);
             if (albumInfo?.Songs == null || !albumInfo.Songs.Any())
             {
                 LogAndAppendMessage($"No tracks to download found in the album: {ReleaseInfo.Album}", LogLevel.Debug);
@@ -117,7 +119,7 @@ namespace Tubifarry.Download.Clients
                 catch (Exception ex)
                 {
                     LogAndAppendMessage($"Failed to process track '{trackInfo.Name}' in album '{ReleaseInfo.Album}'", LogLevel.Error);
-                    Logger?.Error(ex, $"Failed to process track '{trackInfo.Name}' in album '{ReleaseInfo.Album}'.");
+                    _logger?.Error(ex, $"Failed to process track '{trackInfo.Name}' in album '{ReleaseInfo.Album}'.");
                 }
             }
         }
@@ -125,7 +127,7 @@ namespace Tubifarry.Download.Clients
         private void LogAndAppendMessage(string message, LogLevel logLevel)
         {
             _message.AppendLine(message);
-            Logger?.Log(logLevel, message);
+            _logger?.Log(logLevel, message);
         }
 
         public async Task<byte[]?> TryDownloadCoverAsync(AlbumInfo albumInfo, CancellationToken token)
@@ -201,7 +203,7 @@ namespace Tubifarry.Download.Clients
             if (!File.Exists(trackPath))
                 return false;
 
-            AudioMetadataHandler audioData = new(trackPath, Options.Logger) { AlbumCover = _albumCover, UseID3v2_3 = Options.UseID3v2_3 };
+            AudioMetadataHandler audioData = new(trackPath) { AlbumCover = _albumCover, UseID3v2_3 = Options.UseID3v2_3 };
 
             if (Options.TryIncludeLrc)
                 audioData.Lyric = await Lyric.FetchLyricsFromLRCLIBAsync(Options.LRCLIBInstance, ReleaseInfo, trackInfo, token);

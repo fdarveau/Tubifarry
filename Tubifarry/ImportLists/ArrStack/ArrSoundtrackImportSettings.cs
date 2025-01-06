@@ -66,7 +66,7 @@ namespace NzbDrone.Core.ImportLists.ArrStack
         [FieldDefinition(4, Label = "Use Strong Search", Type = FieldType.Checkbox, HelpText = "Enable to use a strong-typed search query on MusicBrainz. Disable to allow more lenient searches, which may include audio tracks from movies.", Advanced = true)]
         public bool UseStrongMusicBrainzSearch { get; set; } = true;
 
-        [FieldDefinition(5, Label = "Cache Directory", Type = FieldType.Path, HelpText = "The directory where cached data will be stored. If left empty, the default cache directory will be used.", Placeholder = "/config/soundtrack-cache")]
+        [FieldDefinition(5, Label = "Cache Directory", Type = FieldType.Path, HelpText = "The directory where cached data will be stored.", Placeholder = "/config/soundtrack-cache")]
         public string CacheDirectory { get; set; } = string.Empty;
 
         [FieldDefinition(6, Label = "Cache Retention Time", Type = FieldType.Number, HelpText = "The number of days to retain cached data.", Advanced = true, Placeholder = "7")]

@@ -1,5 +1,6 @@
 ﻿using NLog;
 using NzbDrone.Common.Http;
+using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Parser.Model;
 using System.Security.Cryptography;
 using System.Text;
@@ -15,11 +16,12 @@ namespace NzbDrone.Core.ImportLists.ArrStack
     internal class ArrSoundtrackImportParser : IParseImportListResponse
     {
         private static readonly string[] SoundtrackTerms = { "soundtrack", "ost", "score", "original soundtrack", "film score" };
-
-        public ArrSoundtrackImportSettings Settings { get; set; }
-        public Logger Logger { get; set; }
+        public readonly Logger _logger;
         private readonly IHttpClient _httpClient;
         private readonly FileCache _fileCache;
+
+        public ArrSoundtrackImportSettings Settings { get; set; }
+
 
         private static readonly JsonSerializerOptions _jsonOptions = new()
         {
@@ -27,10 +29,10 @@ namespace NzbDrone.Core.ImportLists.ArrStack
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        public ArrSoundtrackImportParser(ArrSoundtrackImportSettings settings, Logger logger, IHttpClient httpClient)
+        public ArrSoundtrackImportParser(ArrSoundtrackImportSettings settings, IHttpClient httpClient)
         {
             Settings = settings;
-            Logger = logger;
+            _logger = NzbDroneLogger.GetLogger(this);
             _httpClient = httpClient;
             _fileCache = new FileCache(Settings.CacheDirectory);
         }
@@ -91,7 +93,7 @@ namespace NzbDrone.Core.ImportLists.ArrStack
                             itemInfos.Add(importItem);
                         }
                         else
-                            Logger.Debug($"Not similar enough: {albumDetails?.Title ?? "Empty"} | {media.Title}");
+                            _logger.Debug($"Not similar enough: {albumDetails?.Title ?? "Empty"} | {media.Title}");
                     }
 
                     CachedData cachedDataToSave = new()
@@ -111,10 +113,10 @@ namespace NzbDrone.Core.ImportLists.ArrStack
                 {
                     if (ex.Message.Contains("503:ServiceUnavailable"))
                     {
-                        Logger.Warn("Rate limit exceeded. Stopping further processing.");
+                        _logger.Warn("Rate limit exceeded. Stopping further processing.");
                         break;
                     }
-                    Logger.Error(ex, "Failed fetching search");
+                    _logger.Error(ex, "Failed fetching search");
                 }
             }
             return itemInfos;
@@ -179,7 +181,7 @@ namespace NzbDrone.Core.ImportLists.ArrStack
 
             if (releaseGroup == null)
             {
-                Logger.Warn($"No release-group found for album ID: {albumId}");
+                _logger.Warn($"No release-group found for album ID: {albumId}");
                 return null;
             }
             return MusicBrainzAlbumItem.FromXml(releaseGroup, ns);
