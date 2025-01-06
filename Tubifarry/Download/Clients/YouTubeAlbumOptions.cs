@@ -1,6 +1,7 @@
 ﻿using NLog;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.Clients.YouTube;
+using NzbDrone.Core.Organizer;
 using Requests.Options;
 using YouTubeMusicAPI.Client;
 
@@ -28,6 +29,8 @@ namespace Tubifarry.Download.Clients
 
         public bool UseID3v2_3 { get; set; }
 
+        public NamingConfig? NameingConfig { get; set; }
+
         public YouTubeAlbumOptions() { }
 
         protected YouTubeAlbumOptions(YouTubeAlbumOptions options) : base(options)
@@ -38,6 +41,7 @@ namespace Tubifarry.Download.Clients
             TryIncludeSycLrc = options.TryIncludeSycLrc;
             TryIncludeLrc = options.TryIncludeLrc;
             Chunks = options.Chunks;
+            NameingConfig = options.NameingConfig;
             UseID3v2_3 = options.UseID3v2_3;
             ReEncodeOptions = options.ReEncodeOptions;
             LRCLIBInstance = options.LRCLIBInstance;

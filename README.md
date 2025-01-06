@@ -71,6 +71,9 @@ To enable this feature:
 
    **Note**: For higher-quality audio (e.g., 256kb/s), you need a **YouTube Premium subscription**.  
 
+3. **Saving .lrc Files**:  
+   If you want to save **.lrc files** (lyric files), navigate to **Media Management > Advanced Settings > Import Extra Files** and add `lrc` to the list of supported file types. This ensures that lyric files are imported and saved alongside your music files.  
+
 ---
 
 ### Troubleshooting 🛠️  

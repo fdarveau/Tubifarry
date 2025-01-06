@@ -2,6 +2,7 @@
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Indexers;
+using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Parser.Model;
 using Requests;
 using Tubifarry.Core;
@@ -17,7 +18,7 @@ namespace NzbDrone.Download.Clients.YouTube
     /// </summary>
     public interface IYoutubeDownloadManager
     {
-        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, YoutubeClient provider);
+        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, NamingConfig namingConfig, YoutubeClient provider);
         public IEnumerable<DownloadClientItem> GetItems();
         public void RemoveItem(DownloadClientItem item);
         public void SetCookies(string path);
@@ -52,7 +53,7 @@ namespace NzbDrone.Download.Clients.YouTube
             _ytClient = new(cookies: CookieManager.ParseCookieFile(path));
         }
 
-        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, YoutubeClient provider)
+        public Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer, NamingConfig namingConfig, YoutubeClient provider)
         {
             _testTask ??= provider.TestFFmpeg();
             _testTask.Wait();
@@ -66,6 +67,7 @@ namespace NzbDrone.Download.Clients.YouTube
                 Chunks = provider.Settings.Chunks,
                 DelayBetweenAttemps = TimeSpan.FromSeconds(5),
                 NumberOfAttempts = 2,
+                NameingConfig = namingConfig,
                 LRCLIBInstance = provider.Settings.LRCLIBInstance,
                 UseID3v2_3 = provider.Settings.UseID3v2_3,
                 ReEncodeOptions = (ReEncodeOptions)provider.Settings.ReEncode,

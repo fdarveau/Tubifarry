@@ -111,7 +111,7 @@ namespace NzbDrone.Core.ImportLists.ArrStack
         private ImportListDefinition GetDefinition(string name, ArrSoundtrackImportSettings settings) => new()
         {
             EnableAutomaticAdd = false,
-            Name = name + "-Soundtracks",
+            Name = name + " Soundtracks",
             Implementation = GetType().Name,
             Settings = settings
         };
