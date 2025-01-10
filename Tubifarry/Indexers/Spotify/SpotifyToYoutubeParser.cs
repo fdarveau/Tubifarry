@@ -1,4 +1,5 @@
 ﻿using NLog;
+using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Parser.Model;
 using Requests;
 using Requests.Options;
@@ -24,12 +25,12 @@ namespace NzbDrone.Core.Indexers.Spotify
         private YouTubeMusicClient _ytClient;
         private static readonly int[] StandardBitrates = { 96, 128, 160, 192, 256, 320 };
 
-        public Logger _logger { get; set; }
+        private readonly Logger _logger;
         private string? _cookiePath;
 
-        public SpotifyToYoutubeParser(Logger logger)
+        public SpotifyToYoutubeParser()
         {
-            _logger = logger;
+            _logger = NzbDroneLogger.GetLogger(this);
             _ytClient = new YouTubeMusicClient();
         }
 
@@ -49,7 +50,7 @@ namespace NzbDrone.Core.Indexers.Spotify
         public IList<ReleaseInfo> ParseResponse(IndexerResponse indexerResponse)
         {
             List<ReleaseInfo> releases = new();
-            _logger.Debug("Starting to parse Spotify response.");
+            _logger.Trace("Starting to parse Spotify response.");
 
             try
             {
@@ -98,7 +99,7 @@ namespace NzbDrone.Core.Indexers.Spotify
                         await AddYoutubeData(albumInfo);
 
                         if (albumInfo.Bitrate == 0)
-                            _logger.Debug($"No YouTube Music URL found for album: {albumInfo.AlbumName} by {albumInfo.ArtistName}.");
+                            _logger.Trace($"No YouTube Music URL found for album: {albumInfo.AlbumName} by {albumInfo.ArtistName}.");
                         else
                             releases.Add(albumInfo.ToReleaseInfo());
 
@@ -111,24 +112,23 @@ namespace NzbDrone.Core.Indexers.Spotify
                     }
                 }, new RequestOptions<VoidStruct, VoidStruct>() { NumberOfAttempts = 1 }));
             }
-
             requestContainer.Task.Wait();
         }
 
-        private static AlbumData ExtractAlbumInfo(JsonElement album) => new()
+        private static AlbumData ExtractAlbumInfo(JsonElement album) => new("Tubifarry")
         {
             AlbumId = album.TryGetProperty("id", out JsonElement idProp) ? idProp.GetString() ?? "UnknownAlbumId" : "UnknownAlbumId",
             AlbumName = album.TryGetProperty("name", out JsonElement nameProp) ? nameProp.GetString() ?? "UnknownAlbum" : "UnknownAlbum",
             ArtistName = album.TryGetProperty("artists", out JsonElement artistsProp) && artistsProp.GetArrayLength() > 0
                     ? artistsProp[0].GetProperty("name").GetString() ?? "UnknownArtist" : "UnknownArtist",
-            SpotifyUrl = album.TryGetProperty("external_urls", out JsonElement externalUrlsProp)
+            InfoUrl = album.TryGetProperty("external_urls", out JsonElement externalUrlsProp)
                     ? externalUrlsProp.GetProperty("spotify").GetString() ?? string.Empty : string.Empty,
             ReleaseDate = album.TryGetProperty("release_date", out JsonElement releaseDateProp) ? releaseDateProp.GetString() ?? "0000-01-01" : "0000-01-01",
             ReleaseDatePrecision = album.TryGetProperty("release_date_precision", out JsonElement releaseDatePrecisionProp)
                     ? releaseDatePrecisionProp.GetString() ?? "day" : "day",
             TotalTracks = album.TryGetProperty("total_tracks", out JsonElement totalTracksProp) ? totalTracksProp.GetInt32() : 0,
             ExplicitContent = album.TryGetProperty("explicit", out JsonElement explicitProp) && explicitProp.GetBoolean(),
-            CoverUrl = album.TryGetProperty("images", out JsonElement imagesProp) && imagesProp.GetArrayLength() > 0
+            CustomString = album.TryGetProperty("images", out JsonElement imagesProp) && imagesProp.GetArrayLength() > 0
                     ? imagesProp[0].GetProperty("url").GetString() ?? string.Empty : string.Empty,
             CoverResolution = album.TryGetProperty("images", out JsonElement imagesProp2) && imagesProp2.GetArrayLength() > 0
                     ? $"{imagesProp2[0].GetProperty("width").GetInt32()}x{imagesProp2[0].GetProperty("height").GetInt32()}" : "UnknownResolution"
@@ -203,19 +203,15 @@ namespace NzbDrone.Core.Indexers.Spotify
         private static string NormalizeTitle(string title)
         {
             title = Regex.Replace(title, @"[\(\[].*?[\)\]]", "").Trim();
-
             title = Regex.Replace(title, @"\[\w+(_\w+)?\]", "").Trim();
-
             Match match = Regex.Match(title, @"^(?<artist>.+?)(?: - )(?<album>.+?)(?: - )(?<year>\d{4})");
             if (match.Success)
             {
                 string artist = match.Groups["artist"].Value.Trim();
                 string album = match.Groups["album"].Value.Trim();
                 string year = match.Groups["year"].Value.Trim();
-
-                return $"{artist} - {album} - {year}";
+                title = $"{artist} - {album} - {year}";
             }
-
             return title;
         }
 
