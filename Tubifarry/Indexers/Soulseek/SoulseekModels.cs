@@ -103,8 +103,8 @@ namespace NzbDrone.Core.Indexers.Soulseek
                 return 0;
 
             double uploadSpeedPriority = Math.Log(UploadSpeed + 1) * 100;
-            double freeSlotPenalty = HasFreeUploadSlot ? 0 : -200;
-            return (int)Math.Clamp(uploadSpeedPriority + freeSlotPenalty, 0, 1000);
+            double freeSlotPenalty = HasFreeUploadSlot ? 0 : -1000;
+            return (int)(uploadSpeedPriority + freeSlotPenalty);
         }
     }
 

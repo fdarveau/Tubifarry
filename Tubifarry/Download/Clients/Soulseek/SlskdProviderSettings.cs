@@ -41,10 +41,16 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
         [FieldDefinition(3, Label = "Download Path", Type = FieldType.Path, HelpText = "Specify the directory where downloaded files will be saved. If not specified, Slskd's default download path is used.")]
         public string DownloadPath { get; set; } = string.Empty;
 
-        [FieldDefinition(4, Label = "Is Fetched remote", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
+        [FieldDefinition(5, Label = "Use LRCLIB for Lyrics", HelpText = "Enable this option to fetch lyrics from LRCLIB after the download is complete.", Type = FieldType.Checkbox)]
+        public bool UseLRCLIB { get; set; } = false;
+
+        [FieldDefinition(6, Label = "LRC Lib Instance", Type = FieldType.Url, HelpText = "The URL of a LRC Lib instance to connect to. Default is 'https://lrclib.net'.", Advanced = true)]
+        public string LRCLIBInstance { get; set; } = "https://lrclib.net";
+
+        [FieldDefinition(98, Label = "Is Fetched remote", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
         public bool IsRemotePath { get; set; }
 
-        [FieldDefinition(4, Label = "Is Localhost", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
+        [FieldDefinition(99, Label = "Is Localhost", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
         public bool IsLocalhost { get; set; }
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));

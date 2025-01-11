@@ -3,16 +3,15 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Parser.Model;
 using System.Text.RegularExpressions;
-using YouTubeMusicAPI.Models.Info;
 
 namespace Tubifarry.Core
 {
 
     public record Lyric(string? PlainLyrics, SyncLyric? SyncedLyrics)
     {
-        public static async Task<Lyric?> FetchLyricsFromLRCLIBAsync(string instance, ReleaseInfo releaseInfo, AlbumSongInfo trackInfo, CancellationToken token = default)
+        public static async Task<Lyric?> FetchLyricsFromLRCLIBAsync(string instance, ReleaseInfo releaseInfo, string trackName, int duration = 0, CancellationToken token = default)
         {
-            string requestUri = $"{instance}/api/get?artist_name={Uri.EscapeDataString(releaseInfo.Artist)}&track_name={Uri.EscapeDataString(trackInfo.Name)}&album_name={Uri.EscapeDataString(releaseInfo.Album)}&duration={trackInfo.Duration.TotalSeconds}";
+            string requestUri = $"{instance}/api/get?artist_name={Uri.EscapeDataString(releaseInfo.Artist)}&track_name={Uri.EscapeDataString(trackName)}&album_name={Uri.EscapeDataString(releaseInfo.Album)}{(duration != 0 ? $"&duration={duration}" : "")}";
             HttpResponseMessage response = await HttpGet.HttpClient.GetAsync(requestUri, token);
             if (!response.IsSuccessStatusCode) return null;
             JObject json = JObject.Parse(await response.Content.ReadAsStringAsync(token));

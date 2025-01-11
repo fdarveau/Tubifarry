@@ -204,7 +204,7 @@ namespace Tubifarry.Download.Clients
             AudioMetadataHandler audioData = new(trackPath) { AlbumCover = _albumCover, UseID3v2_3 = Options.UseID3v2_3 };
 
             if (Options.TryIncludeLrc)
-                audioData.Lyric = await Lyric.FetchLyricsFromLRCLIBAsync(Options.LRCLIBInstance, ReleaseInfo, trackInfo, token);
+                audioData.Lyric = await Lyric.FetchLyricsFromLRCLIBAsync(Options.LRCLIBInstance, ReleaseInfo, trackInfo.Name, (int)trackInfo.Duration.TotalSeconds, token);
 
             AudioFormat format = AudioFormatHelper.ConvertOptionToAudioFormat(Options.ReEncodeOptions);
 

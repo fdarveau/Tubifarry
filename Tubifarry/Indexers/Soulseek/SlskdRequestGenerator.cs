@@ -30,53 +30,97 @@ namespace NzbDrone.Core.Indexers.Soulseek
         {
             _logger.Trace($"Generating search requests for album: {searchCriteria.AlbumQuery} by artist: {searchCriteria.ArtistQuery}");
             IndexerPageableRequestChain chain = new();
-            chain.AddTier(GetRequests(searchCriteria.ArtistQuery, searchCriteria.AlbumQuery, searchCriteria.InteractiveSearch));
+
+            chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, searchCriteria.AlbumQuery, searchCriteria.InteractiveSearch));
+
+            if (!Settings.UseFallbackSearch)
+                return chain;
+
+            List<string> aliases = searchCriteria.Artist.Metadata.Value.Aliases;
+            for (int i = 0; i < 2 && i < aliases.Count; i++)
+                if (aliases[i].Length > 3)
+                    chain.AddTier(DeferredGetRequests(aliases[i], searchCriteria.AlbumQuery, searchCriteria.InteractiveSearch));
+            if (searchCriteria.AlbumQuery.Length > 20)
+            {
+                string[] albumWords = searchCriteria.AlbumQuery.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                int halfLength = (int)Math.Ceiling(albumWords.Length / 2.0);
+                string halfAlbumTitle = string.Join(" ", albumWords.Take(halfLength));
+                chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, halfAlbumTitle, searchCriteria.InteractiveSearch, searchCriteria.AlbumQuery));
+            }
+            chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, null, searchCriteria.InteractiveSearch, searchCriteria.AlbumQuery));
             return chain;
         }
+
 
         public IndexerPageableRequestChain GetSearchRequests(ArtistSearchCriteria searchCriteria)
         {
             _logger.Trace($"Generating search requests for artist: {searchCriteria.ArtistQuery}");
             IndexerPageableRequestChain chain = new();
-            chain.AddTier(GetRequests(searchCriteria.ArtistQuery, null, searchCriteria.InteractiveSearch));
+            List<string> aliases = searchCriteria.Artist.Metadata.Value.Aliases;
+            for (int i = 0; i < 3 && i < aliases.Count && Settings.UseFallbackSearch; i++)
+                if (aliases[i].Length > 3)
+                    chain.AddTier(DeferredGetRequests(aliases[i], null, searchCriteria.InteractiveSearch));
             return chain;
         }
 
-        private IEnumerable<IndexerRequest> GetRequests(string artist, string? album = null, bool interactive = false)
+
+        private IEnumerable<IndexerRequest> DeferredGetRequests(string artist, string? album, bool interactive, string? fullAlbum = null)
         {
-            var searchData = new
+            _searchResultsRequest = null;
+            IndexerRequest? request = GetRequestsAsync(artist, album, interactive, fullAlbum).Result;
+            if (request != null)
+                yield return request;
+        }
+
+        private async Task<IndexerRequest?> GetRequestsAsync(string artist, string? album, bool interactive, string? fullAlbum = null)
+        {
+            try
             {
-                Id = Guid.NewGuid().ToString(),
-                Settings.FileLimit,
-                FilterResponses = true,
-                Settings.MaximumPeerQueueLength,
-                Settings.MinimumPeerUploadSpeed,
-                Settings.MinimumResponseFileCount,
-                Settings.ResponseLimit,
-                SearchText = $"{album} {artist}",
-                SearchTimeout = (int)(Settings.TimeoutInSeconds * 1000),
-            };
+                var searchData = new
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Settings.FileLimit,
+                    FilterResponses = true,
+                    Settings.MaximumPeerQueueLength,
+                    Settings.MinimumPeerUploadSpeed,
+                    Settings.MinimumResponseFileCount,
+                    Settings.ResponseLimit,
+                    SearchText = $"{album} {artist}",
+                    SearchTimeout = (int)(Settings.TimeoutInSeconds * 1000),
+                };
 
-            HttpRequest searchRequest = new HttpRequestBuilder($"{Settings.BaseUrl}/api/v0/searches")
-                .SetHeader("X-API-KEY", Settings.ApiKey)
-                .SetHeader("Content-Type", "application/json")
-                .Post()
-                .Build();
+                HttpRequest searchRequest = new HttpRequestBuilder($"{Settings.BaseUrl}/api/v0/searches")
+                    .SetHeader("X-API-KEY", Settings.ApiKey)
+                    .SetHeader("Content-Type", "application/json")
+                    .Post()
+                    .Build();
 
-            searchRequest.SetContent(JsonConvert.SerializeObject(searchData));
-            _client.Execute(searchRequest);
-            WaitOnSearchCompletionAsync(searchData.Id, TimeSpan.FromSeconds(Settings.TimeoutInSeconds)).Wait();
+                searchRequest.SetContent(JsonConvert.SerializeObject(searchData));
+                await _client.ExecuteAsync(searchRequest);
+                await WaitOnSearchCompletionAsync(searchData.Id, TimeSpan.FromSeconds(Settings.TimeoutInSeconds));
 
-            _logger.Trace($"Generated search initiation request: {searchRequest.Url}");
+                _logger.Trace($"Generated search initiation request: {searchRequest.Url}");
 
-            HttpRequest request = new HttpRequestBuilder($"{Settings.BaseUrl}/api/v0/searches/{searchData.Id}")
-                .AddQueryParam("includeResponses", true)
-                .SetHeader("X-API-KEY", Settings.ApiKey)
-                .SetHeader("X-ALBUM", Convert.ToBase64String(Encoding.UTF8.GetBytes(album ?? "")))
-                .SetHeader("X-ARTIST", Convert.ToBase64String(Encoding.UTF8.GetBytes(artist)))
-                .SetHeader("X-INTERACTIVE", interactive.ToString())
-                .Build();
-            yield return new IndexerRequest(request);
+                HttpRequest request = new HttpRequestBuilder($"{Settings.BaseUrl}/api/v0/searches/{searchData.Id}")
+                    .AddQueryParam("includeResponses", true)
+                    .SetHeader("X-API-KEY", Settings.ApiKey)
+                    .SetHeader("X-ALBUM", Convert.ToBase64String(Encoding.UTF8.GetBytes(fullAlbum ?? album ?? "")))
+                    .SetHeader("X-ARTIST", Convert.ToBase64String(Encoding.UTF8.GetBytes(artist)))
+                    .SetHeader("X-INTERACTIVE", interactive.ToString())
+                    .Build();
+
+                return new IndexerRequest(request);
+            }
+            catch (HttpException ex) when (ex.Response.StatusCode == HttpStatusCode.NotFound)
+            {
+                _logger.Warn($"Search request failed for artist: {artist}, album: {album}. Error: {ex.Message}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"An error occurred while generating search request for artist: {artist}, album: {album}");
+                return null;
+            }
         }
 
         private async Task WaitOnSearchCompletionAsync(string searchId, TimeSpan timeout)
@@ -137,9 +181,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
         private async Task<dynamic?> GetSearchResultsAsync(string searchId)
         {
             _searchResultsRequest ??= new HttpRequestBuilder($"{Settings.BaseUrl}/api/v0/searches/{searchId}")
-                     .SetHeader("X-API-KEY", Settings.ApiKey)
-                     .Build();
-
+                     .SetHeader("X-API-KEY", Settings.ApiKey).Build();
             HttpResponse response = await _client.ExecuteAsync(_searchResultsRequest);
 
             if (response.StatusCode != HttpStatusCode.OK)

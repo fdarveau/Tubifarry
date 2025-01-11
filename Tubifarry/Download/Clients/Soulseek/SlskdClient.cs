@@ -10,6 +10,7 @@ using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.RemotePathMappings;
 using System.Net;
 using System.Text.Json;
+using Tubifarry.Core;
 
 namespace NzbDrone.Core.Download.Clients.Soulseek
 {
@@ -34,10 +35,44 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
 
             if (response.StatusCode != HttpStatusCode.Created)
                 throw new DownloadClientException("Failed to create download.");
+            if (Settings.UseLRCLIB)
+                item.FileStateChanged += FileStateChanged;
             AddDownloadItem(item);
             return item.ID.ToString();
         }
 
+        private void FileStateChanged(object? sender, SlskdDownloadFile file)
+        {
+            string filename = file.Filename;
+            string extension = Path.GetExtension(filename);
+            AudioFormat format = AudioFormatHelper.GetAudioCodecFromExtension(extension.TrimStart('.'));
+
+            if (file.GetStatus() != DownloadItemStatus.Completed || format == AudioFormat.Unknown)
+                return;
+            PostProcess((SlskdDownloadItem)sender!, file);
+        }
+
+        private void PostProcess(SlskdDownloadItem item, SlskdDownloadFile file) => item.PostProcessTasks.Add(Task.Run(async () =>
+        {
+            string filename = file.Filename.Replace('\\', '/').TrimEnd('/').Split('/').LastOrDefault() ?? "";
+            string filePath = Path.Combine(item.GetFullFolderPath(Settings.DownloadPath).FullPath, filename);
+
+            _logger.Trace($"Starting post-processing for file: {filePath}");
+
+            if (!File.Exists(filePath))
+                return;
+
+            _logger.Trace($"File found for post-processing: {filePath}");
+
+            FileInfoParser parser = new(filename);
+            if (parser.Title == null)
+                return;
+
+            Lyric? lyric = await Lyric.FetchLyricsFromLRCLIBAsync(Settings.LRCLIBInstance, item.RemoteAlbum.Release, parser.Title);
+            AudioMetadataHandler metadataHandler = new(filePath) { Lyric = lyric };
+
+            _logger.Trace($"Lyrics successfully written: {await metadataHandler.TryCreateLrcFileAsync(default)}");
+        }));
 
         public override IEnumerable<DownloadClientItem> GetItems()
         {

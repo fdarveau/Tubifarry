@@ -15,7 +15,25 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
         public List<SlskdFileData> FileData { get; set; } = new();
         public string? Username { get; set; }
         public RemoteAlbum RemoteAlbum { get; set; }
-        public SlskdDownloadDirectory? SlskdDownloadDirectory { get; set; }
+
+        public event EventHandler<SlskdDownloadFile>? FileStateChanged;
+
+        private SlskdDownloadDirectory? _slskdDownloadDirectory;
+        private Dictionary<string, string> _previousFileStates = new();
+
+        public List<Task> PostProcessTasks { get; } = new();
+
+        public SlskdDownloadDirectory? SlskdDownloadDirectory
+        {
+            get => _slskdDownloadDirectory;
+            set
+            {
+                if (_slskdDownloadDirectory == value)
+                    return;
+                CompareFileStates(_slskdDownloadDirectory, value);
+                _slskdDownloadDirectory = value;
+            }
+        }
 
         public SlskdDownloadItem(RemoteAlbum remoteAlbum)
         {
@@ -30,13 +48,26 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
             _downloadClientItem = new() { DownloadId = ID.ToString(), CanBeRemoved = true, CanMoveFiles = true };
         }
 
-        public DownloadClientItem GetDownloadClientItem(string downloadPath)
+        private void CompareFileStates(SlskdDownloadDirectory? previousDirectory, SlskdDownloadDirectory? newDirectory)
         {
-            _downloadClientItem.OutputPath = new OsPath(Path.Combine(downloadPath, SlskdDownloadDirectory?.Directory
+            if (newDirectory?.Files == null)
+                return;
+
+            foreach (SlskdDownloadFile file in newDirectory.Files)
+                if (_previousFileStates.TryGetValue(file.Id, out string? previousState) && previousState != file.State)
+                    FileStateChanged?.Invoke(this, file);
+            _previousFileStates = newDirectory.Files.ToDictionary(file => file.Id, file => file.State);
+        }
+
+        public OsPath GetFullFolderPath(string downloadPath) => new(Path.Combine(downloadPath, SlskdDownloadDirectory?.Directory
             .Replace('\\', '/')
             .TrimEnd('/')
             .Split('/')
             .LastOrDefault() ?? ""));
+
+        public DownloadClientItem GetDownloadClientItem(string downloadPath)
+        {
+            _downloadClientItem.OutputPath = GetFullFolderPath(downloadPath);
             _downloadClientItem.Title = RemoteAlbum.Release.Title;
 
             if (SlskdDownloadDirectory?.Files == null)
@@ -62,7 +93,7 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
 
             DownloadItemStatus status = DownloadItemStatus.Queued;
 
-            if ((double)failedFiles.Count / fileStatuses.Count * 100 > 30)
+            if ((double)failedFiles.Count / fileStatuses.Count * 100 > 10)
             {
                 status = DownloadItemStatus.Failed;
                 _downloadClientItem.Message = $"Downloading {failedFiles.Count} files failed: {string.Join(", ", failedFiles)}";
@@ -73,7 +104,12 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
                 _downloadClientItem.Message = $"Downloading {failedFiles.Count} files failed: {string.Join(", ", failedFiles)}";
             }
             else if (fileStatuses.All(status => status == DownloadItemStatus.Completed))
-                status = DownloadItemStatus.Completed;
+            {
+                if (PostProcessTasks.Any(task => !task.IsCompleted))
+                    status = DownloadItemStatus.Downloading;
+                else
+                    status = DownloadItemStatus.Completed;
+            }
             else if (fileStatuses.Any(status => status == DownloadItemStatus.Paused))
                 status = DownloadItemStatus.Paused;
             else if (fileStatuses.Any(status => status == DownloadItemStatus.Downloading))
