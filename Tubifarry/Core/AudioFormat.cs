@@ -31,6 +31,9 @@ namespace Tubifarry.Core
             AudioFormat.WMA
         };
 
+
+        private static readonly int[] _standardBitrates = { 0, 96, 128, 160, 192, 256, 320 };
+
         /// <summary>
         /// Returns the correct file extension for a given audio codec.
         /// </summary>
@@ -121,5 +124,8 @@ namespace Tubifarry.Core
             "wma" => AudioFormat.WMA,
             _ => AudioFormat.Unknown // Default for unknown extensions
         };
+
+
+        public static int RoundToStandardBitrate(int bitrateKbps) => _standardBitrates.OrderBy(b => Math.Abs(b - bitrateKbps)).First();
     }
 }

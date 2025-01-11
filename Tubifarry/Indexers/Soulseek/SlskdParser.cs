@@ -90,7 +90,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
                 bitRate = (int)((totalSize * 8) / (totalDuration * 1000));
 
             List<SlskdFileData>? filesToDownload = directory.GroupBy(f => f.Filename?[..f.Filename.LastIndexOf('\\')]).FirstOrDefault(g => g.Key == directory.Key)?.ToList();
-
+            AudioFormat codec = AudioFormatHelper.GetAudioCodecFromExtension(mostCommonExtension ?? string.Empty);
             return new AlbumData("Slskd")
             {
                 AlbumId = $"/api/v0/transfers/downloads/{folderData.Username}",
@@ -98,8 +98,8 @@ namespace NzbDrone.Core.Indexers.Soulseek
                 AlbumName = album ?? "Unknown Album",
                 ReleaseDate = folderData.Year,
                 ReleaseDateTime = (string.IsNullOrEmpty(folderData.Year) || !int.TryParse(folderData.Year, out int yearInt) ? DateTime.MinValue : new DateTime(yearInt, 1, 1)),
-                Codec = AudioFormatHelper.GetAudioCodecFromExtension(mostCommonExtension ?? string.Empty),
-                Bitrate = bitRate ?? 0,
+                Codec = codec,
+                Bitrate = (codec == AudioFormat.MP3 ? AudioFormatHelper.RoundToStandardBitrate(bitRate ?? 0) : bitRate) ?? 0,
                 Size = totalSize,
                 Priotity = folderData.CalculatePriority(),
                 CustomString = JsonConvert.SerializeObject(filesToDownload),
@@ -129,7 +129,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
             {
                 try
                 {
-                    if (delay) await Task.Delay(30000);
+                    if (delay) await Task.Delay(90000);
                     HttpRequest request = new HttpRequestBuilder($"{Settings.BaseUrl}/api/v0/searches/{searchId}").SetHeader("X-API-KEY", Settings.ApiKey).Build();
                     request.Method = HttpMethod.Delete;
                     HttpResponse response = await _httpClient.ExecuteAsync(request);

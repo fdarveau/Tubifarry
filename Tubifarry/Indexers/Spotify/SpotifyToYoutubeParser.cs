@@ -23,7 +23,6 @@ namespace NzbDrone.Core.Indexers.Spotify
     public class SpotifyToYoutubeParser : ISpotifyToYoutubeParser
     {
         private YouTubeMusicClient _ytClient;
-        private static readonly int[] StandardBitrates = { 96, 128, 160, 192, 256, 320 };
 
         private readonly Logger _logger;
         private string? _cookiePath;
@@ -172,7 +171,7 @@ namespace NzbDrone.Core.Indexers.Spotify
                         if (highestAudioStreamInfo != null)
                         {
                             albumData.Duration = (long)album.Duration.TotalSeconds;
-                            albumData.Bitrate = RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
+                            albumData.Bitrate = AudioFormatHelper.RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
                             albumData.AlbumId = result.Id;
                             break;
                         }
@@ -214,7 +213,5 @@ namespace NzbDrone.Core.Indexers.Spotify
             }
             return title;
         }
-
-        private static int RoundToStandardBitrate(int bitrateKbps) => StandardBitrates.OrderBy(b => Math.Abs(b - bitrateKbps)).First();
     }
 }

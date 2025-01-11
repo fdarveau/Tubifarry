@@ -68,7 +68,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
         [FieldDefinition(0, Label = "URL", Type = FieldType.Url, Placeholder = "http://localhost:5030", HelpText = "The URL of your Slskd instance.")]
         public string BaseUrl { get; set; } = "http://localhost:5030";
 
-        [FieldDefinition(1, Label = "External URL", Type = FieldType.Url, Placeholder = "https://slskd.example.com", HelpText = "An optional external URL for additional resources or documentation.", Advanced = true)]
+        [FieldDefinition(1, Label = "External URL", Type = FieldType.Url, Placeholder = "https://slskd.example.com", HelpText = "URL for interactive search redirect", Advanced = true)]
         public string? ExternalUrl { get; set; } = string.Empty;
 
         [FieldDefinition(2, Label = "API Key", Type = FieldType.Textbox, Privacy = PrivacyLevel.ApiKey, HelpText = "The API key for your Slskd instance. You can find or set this in the Slskd's settings under 'Options'.", Placeholder = "Enter your API key")]

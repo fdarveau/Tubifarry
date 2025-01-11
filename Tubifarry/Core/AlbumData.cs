@@ -89,7 +89,7 @@ namespace Tubifarry.Core
             if (calculatedBitrate <= 0 && Size.HasValue && Duration > 0)
                 calculatedBitrate = (int)((Size.Value * 8) / (Duration * 1000));
 
-            if (AudioFormatHelper.IsLossyFormat(Codec))
+            if (AudioFormatHelper.IsLossyFormat(Codec) && calculatedBitrate != 0)
                 title += $" [{Codec} {calculatedBitrate}kbps] [WEB]";
             else
                 title += $" [{Codec}] [WEB]";

@@ -1,5 +1,4 @@
 ﻿using NzbDrone.Common.Disk;
-using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Indexers.Soulseek;
 using NzbDrone.Core.Parser.Model;
 using System.Text.Json;
@@ -14,7 +13,7 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
 
         public int ID { get; set; }
         public List<SlskdFileData> FileData { get; set; } = new();
-        public string Username { get; set; } = string.Empty;
+        public string? Username { get; set; }
         public RemoteAlbum RemoteAlbum { get; set; }
         public SlskdDownloadDirectory? SlskdDownloadDirectory { get; set; }
 

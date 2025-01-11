@@ -16,15 +16,14 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
     public class SlskdClient : DownloadClientBase<SlskdProviderSettings>
     {
         private readonly IHttpClient _httpClient;
-        private readonly IHistoryService _historyService;
 
         private static readonly Dictionary<DownloadKey, SlskdDownloadItem> _downloadMappings = new();
 
         public override string Name => "Slskd";
         public override string Protocol => nameof(SoulseekDownloadProtocol);
 
-        public SlskdClient(IHttpClient httpClient, IConfigService configService, IDiskProvider diskProvider,IHistoryService history, IRemotePathMappingService remotePathMappingService, Logger logger)
-            : base(configService, diskProvider, remotePathMappingService, logger) { _httpClient = httpClient; _historyService = history; }
+        public SlskdClient(IHttpClient httpClient, IConfigService configService, IDiskProvider diskProvider, IHistoryService history, IRemotePathMappingService remotePathMappingService, Logger logger)
+            : base(configService, diskProvider, remotePathMappingService, logger) => _httpClient = httpClient;
 
 
         public override async Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer)
@@ -56,7 +55,7 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
             if (!deleteData) return;
             SlskdDownloadItem? slskdItem = GetDownloadItem(clientItem.DownloadId);
             if (slskdItem == null) return;
-            RemoveItemAsync(slskdItem).Wait();
+            _ = RemoveItemAsync(slskdItem);
             RemoveDownloadItem(clientItem.DownloadId);
         }
 
@@ -203,14 +202,20 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
             return request;
         }
 
-        private async Task RemoveItemAsync(SlskdDownloadItem item)
+        private async Task RemoveItemAsync(SlskdDownloadItem downloadItem)
         {
-            HttpResponse response = await _httpClient.ExecuteAsync(BuildHttpRequest($"/api/v0/transfers/downloads/{item.Username}/{item.ID}", HttpMethod.Delete));
+            List<SlskdDownloadFile> files = downloadItem.SlskdDownloadDirectory?.Files ?? new List<SlskdDownloadFile>();
 
-            if (response.StatusCode != HttpStatusCode.NoContent)
-                _logger.Warn($"Failed to remove download with ID {item.ID}. Status Code: {response.StatusCode}");
-            else
-                _logger.Trace($"Successfully removed download with ID {item.ID}.");
+            await Task.WhenAll(files.Select(async file =>
+            {
+                if (!file.State.Contains("Completed"))
+                {
+                    await _httpClient.ExecuteAsync(BuildHttpRequest($"/api/v0/transfers/downloads/{downloadItem.Username}/{file.Id}", HttpMethod.Delete));
+                    await Task.Delay(1000);
+                }
+                await _httpClient.ExecuteAsync(BuildHttpRequest($"/api/v0/transfers/downloads/{downloadItem.Username}/{file.Id}?remove=true", HttpMethod.Delete));
+                _logger.Trace($"Removed download with ID {file.Id}.");
+            }));
         }
 
         private async Task<HttpResponse> ExecuteAsync(HttpRequest request) => await _httpClient.ExecuteAsync(request);
