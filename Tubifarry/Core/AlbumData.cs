@@ -27,6 +27,7 @@ namespace Tubifarry.Core
 
         // Properties from YoutubeSearchResults
         public int Bitrate { get; set; }
+        public int BitDepth { get; set; }
         public long Duration { get; set; }
 
         // Soulseek
@@ -91,6 +92,8 @@ namespace Tubifarry.Core
 
             if (AudioFormatHelper.IsLossyFormat(Codec) && calculatedBitrate != 0)
                 title += $" [{Codec} {calculatedBitrate}kbps] [WEB]";
+            if (!AudioFormatHelper.IsLossyFormat(Codec) && BitDepth != 0)
+                title += $" [{Codec} {BitDepth}bit] [WEB]";
             else
                 title += $" [{Codec}] [WEB]";
 

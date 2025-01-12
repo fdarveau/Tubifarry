@@ -7,6 +7,18 @@ Additionally, Tubifarry supports fetching soundtracks from **Sonarr** (series) a
 
 ---
 
+## Table of Contents 📑
+
+1. [Tubifarry for Lidarr 🎶](#tubifarry-for-lidarr-)
+2. [Installation 🚀](#installation-)
+3. [Soulseek (Slskd) Setup 🎧](#soulseek-slskd-setup-)
+4. [YouTube Downloader Setup 🎥](#youtube-downloader-setup-)
+5. [Fetching Soundtracks 🎬🎵](#fetching-soundtracks-from-sonarr-and-radarr-)
+6. [Queue Cleaner 🧹](#queue-cleaner-)
+7. [Troubleshooting 🛠️](#troubleshooting-)
+
+----
+
 ## Installation 🚀  
 To use Tubifarry, ensure your Lidarr setup is on the `plugins` branch. Follow the steps below to get started.  
 
@@ -90,7 +102,24 @@ To enable this feature:
 
 ---
 
-### Troubleshooting 🛠️  
+## Queue Cleaner 🧹  
+
+The **Queue Cleaner** automatically processes items in your Lidarr queue that have **failed to import**. It ensures your library stays organized by handling failed imports based on your preferences.  
+
+1. **Key Options**:  
+   - *Blocklist*: Choose to remove, blocklist, or both for failed imports.  
+   - *Rename*: Automatically rename album folders and tracks using available metadata.  
+   - *Clean Imports*: Decide when to clean—when tracks are missing, metadata is incomplete, or always.  
+   - *Retry Finding Release*: Automatically retry searching for a release if the import fails.  
+
+2. **How to Enable**:  
+   - Navigate to `Settings -> Connect` in Lidarr.  
+   - Add a new connection and select the **Queue Cleaner**.  
+   - Configure the settings to match your needs.  
+
+---
+
+## Troubleshooting 🛠️  
 - **Slskd Download Path Permissions**: Ensure Lidarr has read/write access to the Slskd download path. Verify folder permissions and ensure the user running Lidarr has the necessary access. For Docker setups, confirm the volume is correctly mounted and permissions are set.  
 - **Optional: FFmpeg Issues**: If you choose to use FFmpeg and songs fail to process, verify that FFmpeg is correctly installed and accessible in your system's PATH. If not, try reinstalling or downloading it manually.  
 - **Metadata Issues**: If metadata is not being added to downloaded files, confirm that the files are in a supported format. If using FFmpeg, ensure it is extracting audio to formats like AAC embedded in MP4 containers (check debug logs).  

@@ -4,7 +4,6 @@ using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
-using NzbDrone.Core.History;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.RemotePathMappings;
@@ -23,7 +22,7 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
         public override string Name => "Slskd";
         public override string Protocol => nameof(SoulseekDownloadProtocol);
 
-        public SlskdClient(IHttpClient httpClient, IConfigService configService, IDiskProvider diskProvider, IHistoryService history, IRemotePathMappingService remotePathMappingService, Logger logger)
+        public SlskdClient(IHttpClient httpClient, IConfigService configService, IDiskProvider diskProvider, IRemotePathMappingService remotePathMappingService, Logger logger)
             : base(configService, diskProvider, remotePathMappingService, logger) => _httpClient = httpClient;
 
 

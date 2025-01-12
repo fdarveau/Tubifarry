@@ -85,9 +85,13 @@ namespace NzbDrone.Core.Indexers.Soulseek
             long totalSize = directory.Sum(f => f.Size);
             int totalDuration = directory.Sum(f => f.Length ?? 0);
 
-            int? bitRate = directory.First().BitRate;
-            if (!bitRate.HasValue && totalDuration > 0)
-                bitRate = (int)((totalSize * 8) / (totalDuration * 1000));
+            int? mostCommonBitRate = directory.GroupBy(f => f.BitRate).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;
+
+            int? mostCommonBitDepth = directory.GroupBy(f => f.BitDepth).OrderByDescending(g => g.Count()).FirstOrDefault()?.Key;
+
+
+            if (!mostCommonBitRate.HasValue && totalDuration > 0)
+                mostCommonBitRate = (int)((totalSize * 8) / (totalDuration * 1000));
 
             List<SlskdFileData>? filesToDownload = directory.GroupBy(f => f.Filename?[..f.Filename.LastIndexOf('\\')]).FirstOrDefault(g => g.Key == directory.Key)?.ToList();
             AudioFormat codec = AudioFormatHelper.GetAudioCodecFromExtension(mostCommonExtension ?? string.Empty);
@@ -99,7 +103,8 @@ namespace NzbDrone.Core.Indexers.Soulseek
                 ReleaseDate = folderData.Year,
                 ReleaseDateTime = (string.IsNullOrEmpty(folderData.Year) || !int.TryParse(folderData.Year, out int yearInt) ? DateTime.MinValue : new DateTime(yearInt, 1, 1)),
                 Codec = codec,
-                Bitrate = (codec == AudioFormat.MP3 ? AudioFormatHelper.RoundToStandardBitrate(bitRate ?? 0) : bitRate) ?? 0,
+                BitDepth = mostCommonBitDepth ?? 0,
+                Bitrate = (codec == AudioFormat.MP3 ? AudioFormatHelper.RoundToStandardBitrate(mostCommonBitRate ?? 0) : mostCommonBitRate) ?? 0,
                 Size = totalSize,
                 Priotity = folderData.CalculatePriority(),
                 CustomString = JsonConvert.SerializeObject(filesToDownload),
