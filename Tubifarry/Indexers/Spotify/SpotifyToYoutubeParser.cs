@@ -66,7 +66,6 @@ namespace NzbDrone.Core.Indexers.Spotify
                     _logger.Error("Spotify response does not contain 'items' property under 'albums'.");
                     return releases;
                 }
-
                 ProcessAlbums(items, releases);
                 return releases.OrderByDescending(o => o.PublishDate).ToArray();
             }

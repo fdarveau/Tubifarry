@@ -72,7 +72,7 @@ namespace NzbDrone.Core.ImportLists.ArrStack
         [FieldDefinition(6, Label = "Cache Retention Time", Type = FieldType.Number, HelpText = "The number of days to retain cached data.", Advanced = true, Placeholder = "7")]
         public int CacheRetentionDays { get; set; } = 7;
 
-        [FieldDefinition(7, Label = "Refresh Interval", Type = FieldType.Textbox, HelpText = "The interval in hours to refresh the import list. Fractional values are allowed (e.g., 1.5 for 1 hour and 30 minutes).", Advanced = true, Placeholder = "12")]
+        [FieldDefinition(7, Label = "Refresh Interval", Type = FieldType.Textbox, HelpText = "The interval to refresh the import list. Fractional values are allowed (e.g., 1.5 for 1 hour and 30 minutes).", Unit = "hours", Advanced = true, Placeholder = "12")]
         public double RefreshInterval { get; set; } = 12.0;
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));

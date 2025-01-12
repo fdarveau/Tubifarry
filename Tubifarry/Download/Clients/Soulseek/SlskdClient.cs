@@ -78,7 +78,7 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
         {
             UpdateDownloadItemsAsync().Wait();
             DownloadClientItemClientInfo clientInfo = DownloadClientItemClientInfo.FromDownloadClient(this, false);
-            foreach (DownloadClientItem? clientItem in GetDownloadItems().Select(x => x.GetDownloadClientItem(Settings.DownloadPath)))
+            foreach (DownloadClientItem? clientItem in GetDownloadItems().Select(x => x.GetDownloadClientItem(Settings.DownloadPath, Settings.GetTimeout())))
             {
                 clientItem.DownloadClientInfo = clientInfo;
                 yield return clientItem;

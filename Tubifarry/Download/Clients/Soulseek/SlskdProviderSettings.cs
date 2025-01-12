@@ -25,6 +25,17 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
                 .Must(path => string.IsNullOrEmpty(path) || Path.IsPathRooted(path))
                 .WithMessage("Download path must be a valid directory path.")
                 .When(x => !string.IsNullOrEmpty(x.DownloadPath));
+
+            // Validate LRCLIBInstance URL
+            RuleFor(x => x.LRCLIBInstance)
+                .IsValidUrl()
+                .WithMessage("LRCLIB instance URL must be a valid URL.");
+
+            // Timeout validation (only if it has a value)
+            RuleFor(c => c.Timeout)
+                .GreaterThanOrEqualTo(0.1)
+                .WithMessage("Timeout must be at least 0.1 hours.")
+                .When(c => c.Timeout.HasValue);
         }
     }
 
@@ -47,11 +58,19 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
         [FieldDefinition(6, Label = "LRC Lib Instance", Type = FieldType.Url, HelpText = "The URL of a LRC Lib instance to connect to. Default is 'https://lrclib.net'.", Advanced = true)]
         public string LRCLIBInstance { get; set; } = "https://lrclib.net";
 
+        [FieldDefinition(7, Label = "Timeout", Type = FieldType.Textbox, HelpText = "Specify the maximum time to wait for a response from the Slskd instance before timing out. Fractional values are allowed (e.g., 1.5 for 1 hour and 30 minutes). Set leave blank for no timeout.", Unit = "hours", Advanced = true, Placeholder = "Enter timeout in hours")]
+        public double? Timeout { get; set; }
+
         [FieldDefinition(98, Label = "Is Fetched remote", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
         public bool IsRemotePath { get; set; }
 
         [FieldDefinition(99, Label = "Is Localhost", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
         public bool IsLocalhost { get; set; }
+
+
+        public TimeSpan? GetTimeout() => Timeout == null ? null : TimeSpan.FromHours(Timeout.Value);
+
+
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));
     }

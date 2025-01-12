@@ -11,7 +11,7 @@ namespace NzbDrone.Core.Blocklisting
 
         public BaseBlocklist(IBlocklistRepository blocklistRepository) => _blocklistRepository = blocklistRepository;
 
-        public string Protocol => nameof(TProtocol);
+        public string Protocol => typeof(TProtocol).Name;
 
         public bool IsBlocklisted(int artistId, ReleaseInfo release) => _blocklistRepository.BlocklistedByTorrentInfoHash(artistId, release.Guid).Any(b => BaseBlocklist<TProtocol>.SameRelease(b, release));
 

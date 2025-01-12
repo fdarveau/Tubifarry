@@ -27,7 +27,7 @@ namespace NzbDrone.Core.ImportLists.Spotify
 
         public override string Scope => "playlist-read-private";
 
-        [FieldDefinition(1, Label = "Refresh Interval", Type = FieldType.Textbox, HelpText = "The interval in hours to refresh the import list. Fractional values are allowed (e.g., 1.5 for 1 hour and 30 minutes).", Advanced = true, Placeholder = "12")]
+        [FieldDefinition(1, Label = "Refresh Interval", Type = FieldType.Textbox, HelpText = "The interval to refresh the import list. Fractional values are allowed (e.g., 1.5 for 1 hour and 30 minutes).", Unit = "hours", Advanced = true, Placeholder = "12")]
         public double RefreshInterval { get; set; } = 12.0;
 
         [FieldDefinition(2, Label = "Cache Directory", Type = FieldType.Path, HelpText = "The directory where cached data will be stored. If left empty, no cache will be used.", Placeholder = "/config/spotify-cache")]

@@ -1,4 +1,6 @@
-﻿using NzbDrone.Common.Disk;
+﻿using NLog;
+using NzbDrone.Common.Disk;
+using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Indexers.Soulseek;
 using NzbDrone.Core.Parser.Model;
 using System.Text.Json;
@@ -17,6 +19,8 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
         public RemoteAlbum RemoteAlbum { get; set; }
 
         public event EventHandler<SlskdDownloadFile>? FileStateChanged;
+
+        private Logger _logger;
 
         private SlskdDownloadDirectory? _slskdDownloadDirectory;
         private Dictionary<string, string> _previousFileStates = new();
@@ -37,6 +41,7 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
 
         public SlskdDownloadItem(RemoteAlbum remoteAlbum)
         {
+            _logger = NzbDroneLogger.GetLogger(this);
             RemoteAlbum = remoteAlbum;
             FileData = JsonSerializer.Deserialize<List<SlskdFileData>>(RemoteAlbum.Release.Source) ?? new();
             _lastUpdateTime = DateTime.UtcNow;
@@ -65,7 +70,7 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
             .Split('/')
             .LastOrDefault() ?? ""));
 
-        public DownloadClientItem GetDownloadClientItem(string downloadPath)
+        public DownloadClientItem GetDownloadClientItem(string downloadPath, TimeSpan? timeout)
         {
             _downloadClientItem.OutputPath = GetFullFolderPath(downloadPath);
             _downloadClientItem.Title = RemoteAlbum.Release.Title;
@@ -92,8 +97,11 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
                 .Select(file => Path.GetFileName(file.Filename)).ToList();
 
             DownloadItemStatus status = DownloadItemStatus.Queued;
+            DateTime lastTime = SlskdDownloadDirectory.Files.Max(x => x.EnqueuedAt > x.StartedAt ? x.EnqueuedAt : x.StartedAt + x.ElapsedTime);
 
-            if ((double)failedFiles.Count / fileStatuses.Count * 100 > 10)
+            if (now - lastTime > timeout)
+                status = DownloadItemStatus.Failed;
+            else if ((double)failedFiles.Count / fileStatuses.Count * 100 > 10)
             {
                 status = DownloadItemStatus.Failed;
                 _downloadClientItem.Message = $"Downloading {failedFiles.Count} files failed: {string.Join(", ", failedFiles)}";
@@ -161,7 +169,8 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
        long BytesRemaining,
        TimeSpan ElapsedTime,
        double PercentComplete,
-       TimeSpan RemainingTime
+       TimeSpan RemainingTime,
+       TimeSpan? EndedAt
    )
     {
         public DownloadItemStatus GetStatus() => State switch
@@ -195,13 +204,14 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
                     State: file.TryGetProperty("state", out JsonElement state) ? state.GetString() ?? string.Empty : string.Empty,
                     RequestedAt: file.TryGetProperty("requestedAt", out JsonElement requestedAt) && DateTime.TryParse(requestedAt.GetString(), out DateTime requestedAtParsed) ? requestedAtParsed : DateTime.MinValue,
                     EnqueuedAt: file.TryGetProperty("enqueuedAt", out JsonElement enqueuedAt) && DateTime.TryParse(enqueuedAt.GetString(), out DateTime enqueuedAtParsed) ? enqueuedAtParsed : DateTime.MinValue,
-                    StartedAt: file.TryGetProperty("startedAt", out JsonElement startedAt) && DateTime.TryParse(startedAt.GetString(), out DateTime startedAtParsed) ? startedAtParsed : DateTime.MinValue,
+                    StartedAt: file.TryGetProperty("startedAt", out JsonElement startedAt) && DateTime.TryParse(startedAt.GetString(), out DateTime startedAtParsed) ? startedAtParsed.ToUniversalTime() : DateTime.MinValue,
                     BytesTransferred: file.TryGetProperty("bytesTransferred", out JsonElement bytesTransferred) ? bytesTransferred.GetInt64() : 0L,
                     AverageSpeed: file.TryGetProperty("averageSpeed", out JsonElement averageSpeed) ? averageSpeed.GetDouble() : 0.0,
                     BytesRemaining: file.TryGetProperty("bytesRemaining", out JsonElement bytesRemaining) ? bytesRemaining.GetInt64() : 0L,
                     ElapsedTime: file.TryGetProperty("elapsedTime", out JsonElement elapsedTime) && TimeSpan.TryParse(elapsedTime.GetString(), out TimeSpan elapsedTimeParsed) ? elapsedTimeParsed : TimeSpan.Zero,
                     PercentComplete: file.TryGetProperty("percentComplete", out JsonElement percentComplete) ? percentComplete.GetDouble() : 0.0,
-                    RemainingTime: file.TryGetProperty("remainingTime", out JsonElement remainingTime) && TimeSpan.TryParse(remainingTime.GetString(), out TimeSpan remainingTimeParsed) ? remainingTimeParsed : TimeSpan.Zero
+                    RemainingTime: file.TryGetProperty("remainingTime", out JsonElement remainingTime) && TimeSpan.TryParse(remainingTime.GetString(), out TimeSpan remainingTimeParsed) ? remainingTimeParsed : TimeSpan.Zero,
+                    EndedAt: file.TryGetProperty("endedAt", out JsonElement endedAt) && TimeSpan.TryParse(endedAt.GetString(), out TimeSpan endedAtParsed) ? endedAtParsed : null
                 );
             }
         }

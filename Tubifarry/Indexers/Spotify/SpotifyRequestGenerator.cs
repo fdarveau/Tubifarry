@@ -75,7 +75,6 @@ namespace NzbDrone.Core.Indexers.Spotify
             HandleToken();
 
             string formattedQuery = Uri.EscapeDataString(searchQuery)
-                .Replace("%20", "%2520") // Encode spaces as %2520 for better compatibility
                 .Replace(":", "%3A");    // Encode colons as %3A for filters
 
             for (int page = 0; page < MaxPages; page++)
