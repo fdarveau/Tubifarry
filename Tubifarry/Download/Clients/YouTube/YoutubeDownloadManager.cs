@@ -1,15 +1,13 @@
 ﻿using NLog;
 using NzbDrone.Core.Download;
-using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Parser.Model;
 using Requests;
-using Tubifarry.Core;
-using Tubifarry.Download.Clients;
+using Tubifarry.Core.Utilities;
 using YouTubeMusicAPI.Client;
 
-namespace NzbDrone.Download.Clients.YouTube
+namespace Tubifarry.Download.Clients.YouTube
 {
 
     /// <summary>

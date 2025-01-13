@@ -1,8 +1,9 @@
 ﻿using FluentValidation;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Validation;
 
-namespace NzbDrone.Core.Indexers.Soulseek
+namespace Tubifarry.Indexers.Soulseek
 {
     internal class SlskdSettingsValidator : AbstractValidator<SlskdSettings>
     {
@@ -16,7 +17,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
 
             // External URL validation (only if not empty)
             RuleFor(c => c.ExternalUrl)
-                .Must(url => string.IsNullOrEmpty(url) || (Uri.IsWellFormedUriString(url, UriKind.Absolute) && !url.EndsWith("/")))
+                .Must(url => string.IsNullOrEmpty(url) || Uri.IsWellFormedUriString(url, UriKind.Absolute) && !url.EndsWith("/"))
                 .WithMessage("External URL must be a valid URL and must not end with a slash ('/').");
 
             // API Key validation

@@ -3,7 +3,7 @@ using NzbDrone.Core.Annotations;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
 
-namespace NzbDrone.Core.Notifications.QueueCleaner
+namespace Tubifarry.Notifications.Queue
 {
     public class QueueCleanerSettingsValidator : AbstractValidator<QueueCleanerSettings>
     {

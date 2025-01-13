@@ -1,16 +1,17 @@
 ﻿using NLog;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
 using Requests;
 using Requests.Options;
 using System.Text.Json;
-using System.Text.RegularExpressions;
-using Tubifarry.Core;
+using Tubifarry.Core.Model;
+using Tubifarry.Core.Utilities;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Search;
 using YouTubeMusicAPI.Models.Streaming;
 
-namespace NzbDrone.Core.Indexers.Spotify
+namespace Tubifarry.Indexers.Spotify
 {
     public interface ISpotifyToYoutubeParser : IParseIndexerResponse
     {
@@ -67,13 +68,13 @@ namespace NzbDrone.Core.Indexers.Spotify
                     return releases;
                 }
                 ProcessAlbums(items, releases);
-                return releases.OrderByDescending(o => o.PublishDate).ToArray();
+                return releases.DistinctBy(x => x.DownloadUrl).OrderByDescending(o => o.PublishDate).ToArray();
             }
             catch (Exception ex)
             {
                 _logger.Error(ex, $"An error occurred while parsing the Spotify response. Response content: {indexerResponse.Content}");
             }
-            return releases.OrderByDescending(o => o.PublishDate).ToArray();
+            return releases.DistinctBy(x => x.DownloadUrl).OrderByDescending(o => o.PublishDate).ToArray();
 
         }
 
@@ -137,30 +138,32 @@ namespace NzbDrone.Core.Indexers.Spotify
         {
             try
             {
-                string query = $"\"{albumData.AlbumName}\" \"{albumData.ArtistName}\"";
-                IEnumerable<AlbumSearchResult> searchResults = await _ytClient.SearchAsync<AlbumSearchResult>(query, 4);
+                _logger.Debug($"Adding YouTube data for album: {albumData.AlbumName} by {albumData.ArtistName}.");
 
-                if (searchResults == null || !searchResults.Any()) return;
+                string query = $"\"{albumData.AlbumName}\" \"{albumData.ArtistName}\"";
+                IEnumerable<AlbumSearchResult> searchResults = await _ytClient.SearchAsync<AlbumSearchResult>(query, 10);
+
+                if (searchResults == null || !searchResults.Any())
+                {
+                    _logger.Debug($"No search results found for album: {albumData.AlbumName}.");
+                    return;
+                }
 
                 foreach (AlbumSearchResult result in searchResults)
                 {
-                    if (result == null)
-                        continue;
+                    if (result == null) continue;
 
-                    if (!IsRelevantResult(result, albumData)) continue;
-
-                    string browsID = await _ytClient.GetAlbumBrowseIdAsync(result.Id);
-                    YouTubeMusicAPI.Models.Info.AlbumInfo album = await _ytClient.GetAlbumInfoAsync(browsID);
+                    string browseId = await _ytClient.GetAlbumBrowseIdAsync(result.Id);
+                    YouTubeMusicAPI.Models.Info.AlbumInfo album = await _ytClient.GetAlbumInfoAsync(browseId);
 
                     if (album?.Songs == null || !album.Songs.Any()) continue;
 
                     if (albumData.TotalTracks > 0 && Math.Abs(album.Songs.Length - albumData.TotalTracks) / (double)albumData.TotalTracks > 0.6) continue;
 
-                    if (album.ReleaseYear != 0 && Math.Abs(album.ReleaseYear - albumData.ReleaseDateTime.Year) > 1) continue;
+                    if (album.ReleaseYear != 0 && Math.Abs(album.ReleaseYear - albumData.ReleaseDateTime.Year) > 2) continue;
 
                     YouTubeMusicAPI.Models.Info.AlbumSongInfo? firstTrack = album.Songs.FirstOrDefault();
-                    if (firstTrack?.Id == null)
-                        continue;
+                    if (firstTrack?.Id == null) continue;
 
                     try
                     {
@@ -172,45 +175,20 @@ namespace NzbDrone.Core.Indexers.Spotify
                             albumData.Duration = (long)album.Duration.TotalSeconds;
                             albumData.Bitrate = AudioFormatHelper.RoundToStandardBitrate(highestAudioStreamInfo.Bitrate / 1000);
                             albumData.AlbumId = result.Id;
+                            _logger.Debug($"Successfully added YouTube data for album: {albumData.AlbumName}.");
                             break;
                         }
                     }
                     catch (Exception ex)
                     {
-                        _logger.Error(ex, $"Failed to process track stream {firstTrack.Name} in album {albumData.AlbumName}");
+                        _logger.Error(ex, $"Failed to process track {firstTrack.Name} in album {albumData.AlbumName}.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error($"Error while adding Youtube data: {ex.Message}");
+                _logger.Error(ex, $"Unexpected error while adding YouTube data for album: {albumData.AlbumName}.");
             }
-        }
-
-        private static bool IsRelevantResult(AlbumSearchResult result, AlbumData parameters)
-        {
-            string normalizedResultName = NormalizeTitle(result.Name);
-            string normalizedParametersAlbumName = NormalizeTitle(parameters.AlbumName);
-
-            bool isAlbumMatch = normalizedResultName.Contains(normalizedParametersAlbumName, StringComparison.OrdinalIgnoreCase);
-            bool isArtistMatch = result.Artists.Any(x => x.Name.Contains(parameters.ArtistName, StringComparison.OrdinalIgnoreCase));
-
-            return isAlbumMatch && isArtistMatch;
-        }
-
-        private static string NormalizeTitle(string title)
-        {
-            title = Regex.Replace(title, @"[\(\[].*?[\)\]]", "").Trim();
-            title = Regex.Replace(title, @"\[\w+(_\w+)?\]", "").Trim();
-            Match match = Regex.Match(title, @"^(?<artist>.+?)(?: - )(?<album>.+?)(?: - )(?<year>\d{4})");
-            if (match.Success)
-            {
-                string artist = match.Groups["artist"].Value.Trim();
-                string album = match.Groups["album"].Value.Trim();
-                string year = match.Groups["year"].Value.Trim();
-                title = $"{artist} - {album} - {year}";
-            }
-            return title;
         }
     }
 }

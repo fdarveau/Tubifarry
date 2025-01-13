@@ -1,6 +1,7 @@
 ﻿using NzbDrone.Common.Http;
+using NzbDrone.Core.ImportLists;
 
-namespace NzbDrone.Core.ImportLists.ArrStack
+namespace Tubifarry.ImportLists.ArrStack
 {
     internal class ArrSoundtrackRequestGenerator : IImportListRequestGenerator
     {

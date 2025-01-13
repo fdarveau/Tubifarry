@@ -2,13 +2,14 @@
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
-using NzbDrone.Core.ImportLists.ArrStack;
 using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.ThingiProvider;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Models;
-using Tubifarry.Core;
+using Tubifarry.Core.Model;
+using Tubifarry.ImportLists.ArrStack;
+using Tubifarry.ImportLists.Spotify;
 
 namespace NzbDrone.Core.ImportLists.Spotify
 {

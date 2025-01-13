@@ -3,7 +3,7 @@ using NzbDrone.Core.Annotations;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
 
-namespace NzbDrone.Core.Download.Clients.Soulseek
+namespace Tubifarry.Download.Clients.Soulseek
 {
     internal class SlskdProviderSettingsValidator : AbstractValidator<SlskdProviderSettings>
     {
@@ -69,8 +69,6 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
 
 
         public TimeSpan? GetTimeout() => Timeout == null ? null : TimeSpan.FromHours(Timeout.Value);
-
-
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));
     }

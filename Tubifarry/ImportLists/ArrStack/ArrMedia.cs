@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace NzbDrone.Core.ImportLists.ArrStack
+namespace Tubifarry.ImportLists.ArrStack
 {
-    public class ArrMedia
+    record class ArrMedia
     {
         [JsonPropertyName("title")]
         public string Title { get; set; } = string.Empty;

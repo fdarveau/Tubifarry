@@ -2,11 +2,12 @@
 using NLog;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using System.Net;
 using System.Text;
 
-namespace NzbDrone.Core.Indexers.Soulseek
+namespace Tubifarry.Indexers.Soulseek
 {
     internal class SlskdRequestGenerator : IIndexerRequestGenerator
     {

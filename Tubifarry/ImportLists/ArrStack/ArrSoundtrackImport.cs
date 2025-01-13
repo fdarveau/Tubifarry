@@ -3,11 +3,13 @@ using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.ThingiProvider;
 using System.Net;
+using Tubifarry.Core.Utilities;
 
-namespace NzbDrone.Core.ImportLists.ArrStack
+namespace Tubifarry.ImportLists.ArrStack
 {
     public class ArrSoundtrackImport : HttpImportListBase<ArrSoundtrackImportSettings>
     {
@@ -37,7 +39,8 @@ namespace NzbDrone.Core.ImportLists.ArrStack
         protected override void Test(List<ValidationFailure> failures)
         {
             failures!.AddIfNotNull(TestConnection());
-            failures!.AddIfNotNull(TestWritePermission());
+            failures!.AddIfNotNull(PermissionTester.TestExistance(Settings.CacheDirectory, _logger));
+            failures!.AddIfNotNull(PermissionTester.TestReadWritePermissions(Settings.CacheDirectory, _logger));
         }
 
         private new ValidationFailure? TestConnection()
@@ -67,35 +70,6 @@ namespace NzbDrone.Core.ImportLists.ArrStack
             {
                 _logger.Error(ex, "Unexpected error while testing Arr-App connection");
                 return new ValidationFailure(string.Empty, $"Unexpected error: {ex.Message}");
-            }
-        }
-
-        private ValidationFailure? TestWritePermission()
-        {
-            try
-            {
-                if (!Directory.Exists(Settings.CacheDirectory))
-                    Directory.CreateDirectory(Settings.CacheDirectory);
-                string testFilePath = Path.Combine(Settings.CacheDirectory, "test_write_permission.tmp");
-                File.WriteAllText(testFilePath, "This is a test file to check write permissions.");
-                string content = File.ReadAllText(testFilePath);
-                File.Delete(testFilePath);
-                return null;
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                _logger.Warn(ex, "Write permission denied for cache directory");
-                return new ValidationFailure("CacheDirectory", $"Write permission denied for cache directory: {ex.Message}");
-            }
-            catch (IOException ex)
-            {
-                _logger.Warn(ex, "IO error while testing cache directory write permissions");
-                return new ValidationFailure("CacheDirectory", $"IO error while testing cache directory: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Unexpected error while testing cache directory write permissions");
-                return new ValidationFailure("CacheDirectory", $"Unexpected error: {ex.Message}");
             }
         }
 

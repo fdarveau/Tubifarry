@@ -1,12 +1,11 @@
 ﻿using NzbDrone.Core.Download;
-using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Organizer;
 using Requests.Options;
 using YouTubeMusicAPI.Client;
 
-namespace Tubifarry.Download.Clients
+namespace Tubifarry.Download.Clients.YouTube
 {
-    public record YouTubeAlbumOptions : RequestOptions<string, string>
+    internal record YouTubeAlbumOptions : RequestOptions<string, string>
     {
         public YouTubeMusicClient? YouTubeMusicClient { get; set; }
 

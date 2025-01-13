@@ -3,7 +3,7 @@ using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Parser.Model;
 using System.Text.RegularExpressions;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Utilities
 {
     public class ReleaseFormatter
     {

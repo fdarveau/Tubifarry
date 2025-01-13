@@ -1,11 +1,12 @@
 ﻿using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Instrumentation;
-using NzbDrone.Core.Indexers.Soulseek;
+using NzbDrone.Core.Download;
 using NzbDrone.Core.Parser.Model;
 using System.Text.Json;
+using Tubifarry.Indexers.Soulseek;
 
-namespace NzbDrone.Core.Download.Clients.Soulseek
+namespace Tubifarry.Download.Clients.Soulseek
 {
     public class SlskdDownloadItem
     {

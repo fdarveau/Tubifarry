@@ -3,14 +3,16 @@ using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Download;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.RemotePathMappings;
-using NzbDrone.Download.Clients.YouTube;
-using Tubifarry.Core;
+using Tubifarry.Core.Model;
+using Tubifarry.Core.Utilities;
+using Xabe.FFmpeg;
 
-namespace NzbDrone.Core.Download.Clients.YouTube
+namespace Tubifarry.Download.Clients.YouTube
 {
     public class YoutubeClient : DownloadClientBase<YoutubeProviderSettings>
     {
@@ -49,6 +51,8 @@ namespace NzbDrone.Core.Download.Clients.YouTube
         protected override void Test(List<ValidationFailure> failures)
         {
             _dlManager.SetCookies(Settings.CookiePath);
+            if (Settings.DownloadPath != null)
+                failures.AddRange(PermissionTester.TestAllPermissions(Settings.FFmpegPath, _logger));
             failures.AddIfNotNull(TestFFmpeg().Result);
         }
 
@@ -56,7 +60,9 @@ namespace NzbDrone.Core.Download.Clients.YouTube
         {
             if (Settings.ReEncode != (int)ReEncodeOptions.Disabled)
             {
-                if (!AudioMetadataHandler.FFmpegIsInstalled)
+                FFmpeg.SetExecutablesPath(Settings.FFmpegPath);
+                AudioMetadataHandler.ResetFFmpegInstallationCheck();
+                if (!AudioMetadataHandler.CheckFFmpegInstalled())
                 {
                     try
                     {

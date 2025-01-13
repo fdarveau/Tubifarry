@@ -1,6 +1,7 @@
+using NzbDrone.Core.Blocklisting;
 using NzbDrone.Core.Indexers;
 
-namespace NzbDrone.Core.Blocklisting
+namespace Tubifarry.Blocklisting
 {
     public class YoutubeBlocklist : BaseBlocklist<YoutubeDownloadProtocol>
     {

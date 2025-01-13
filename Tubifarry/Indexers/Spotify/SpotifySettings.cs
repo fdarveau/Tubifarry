@@ -1,9 +1,10 @@
 ﻿using FluentValidation;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Validation;
-using Tubifarry.Core;
+using Tubifarry.Core.Utilities;
 
-namespace NzbDrone.Core.Indexers.Spotify
+namespace Tubifarry.Indexers.Spotify
 {
     public class SpotifyIndexerSettingsValidator : AbstractValidator<SpotifyIndexerSettings>
     {

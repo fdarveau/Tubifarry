@@ -1,8 +1,9 @@
 ﻿using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
 using System.Text.RegularExpressions;
+using Tubifarry.Core.Utilities;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Model
 {
     /// <summary>
     /// Contains combined information about an album, search parameters, and search results.
@@ -88,7 +89,7 @@ namespace Tubifarry.Core
 
             int calculatedBitrate = Bitrate;
             if (calculatedBitrate <= 0 && Size.HasValue && Duration > 0)
-                calculatedBitrate = (int)((Size.Value * 8) / (Duration * 1000));
+                calculatedBitrate = (int)(Size.Value * 8 / (Duration * 1000));
 
             if (AudioFormatHelper.IsLossyFormat(Codec) && calculatedBitrate != 0)
                 title += $" [{Codec} {calculatedBitrate}kbps] [WEB]";
@@ -111,9 +112,9 @@ namespace Tubifarry.Core
             if (featRegex.IsMatch(albumName))
             {
                 Match match = featRegex.Match(albumName);
-                string featuringArtist = albumName.Substring(match.Index + match.Length).Trim();
+                string featuringArtist = albumName[(match.Index + match.Length)..].Trim();
 
-                albumName = $"{albumName.Substring(0, match.Index).Trim()} (feat. {featuringArtist})";
+                albumName = $"{albumName[..match.Index].Trim()} (feat. {featuringArtist})";
             }
             albumName = Regex.Replace(albumName, @"\((?!feat\.)[^)]*\)", match => $"{{{match.Value.Trim('(', ')')}}}");
 

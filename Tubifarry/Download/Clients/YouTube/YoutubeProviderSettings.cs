@@ -3,9 +3,9 @@ using NzbDrone.Core.Annotations;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
 using NzbDrone.Core.Validation.Paths;
-using Tubifarry.Core;
+using Tubifarry.Core.Utilities;
 
-namespace NzbDrone.Core.Download.Clients.YouTube
+namespace Tubifarry.Download.Clients.YouTube
 {
     public class YoutubeProviderSettingsValidator : AbstractValidator<YoutubeProviderSettings>
     {

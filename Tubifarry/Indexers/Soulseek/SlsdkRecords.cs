@@ -1,9 +1,10 @@
-﻿using System.Text;
+﻿using NzbDrone.Core.Indexers;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Tubifarry.Core;
+using Tubifarry.Core.Utilities;
 
-namespace NzbDrone.Core.Indexers.Soulseek
+namespace Tubifarry.Indexers.Soulseek
 {
     public record SlskdFileData(string? Filename, int? BitRate, int? BitDepth, long Size, int? Length, string? Extension, int? SampleRate, int Code, bool IsLocked)
     {
@@ -15,7 +16,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
             foreach (JsonElement file in filesElement.EnumerateArray())
             {
                 string? filename = file.GetProperty("filename").GetString();
-                string? extension = (!file.TryGetProperty("extension", out JsonElement extensionElement) || string.IsNullOrWhiteSpace(extensionElement.GetString())) ? Path.GetExtension(filename) : extensionElement.GetString();
+                string? extension = !file.TryGetProperty("extension", out JsonElement extensionElement) || string.IsNullOrWhiteSpace(extensionElement.GetString()) ? Path.GetExtension(filename) : extensionElement.GetString();
 
                 if (onlyIncludeAudio && AudioFormatHelper.GetAudioCodecFromExtension(extension ?? "") == AudioFormat.Unknown && !(includedFileExtensions?.Contains(null, StringComparer.OrdinalIgnoreCase) ?? false))
                     continue;

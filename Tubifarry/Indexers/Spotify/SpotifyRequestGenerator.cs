@@ -1,11 +1,12 @@
 ﻿using DownloadAssistant.Base;
 using NLog;
 using NzbDrone.Common.Http;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using Requests;
 using System.Text.Json;
 
-namespace NzbDrone.Core.Indexers.Spotify
+namespace Tubifarry.Indexers.Spotify
 {
     public interface ISpotifyRequestGenerator : IIndexerRequestGenerator
     {
@@ -16,7 +17,7 @@ namespace NzbDrone.Core.Indexers.Spotify
 
     public class SpotifyRequestGenerator : ISpotifyRequestGenerator
     {
-        private const int MaxPages = 2;
+        private const int MaxPages = 3;
         private const int PageSize = 20;
         private const int NewReleaseLimit = 20;
 
@@ -54,8 +55,8 @@ namespace NzbDrone.Core.Indexers.Spotify
             IndexerPageableRequestChain chain = new();
 
             string searchQuery = $"album:{searchCriteria.AlbumQuery} artist:{searchCriteria.ArtistQuery}";
-            chain.AddTier(GetRequests(searchQuery, "album"));
-
+            for (int page = 0; page < MaxPages; page++)
+                chain.AddTier(GetRequests(searchQuery, "album", page * PageSize));
             return chain;
         }
 
@@ -65,29 +66,22 @@ namespace NzbDrone.Core.Indexers.Spotify
             IndexerPageableRequestChain chain = new();
 
             string searchQuery = $"artist:{searchCriteria.ArtistQuery}";
-            chain.AddTier(GetRequests(searchQuery, "album"));
-
+            for (int page = 0; page < MaxPages; page++)
+                chain.AddTier(GetRequests(searchQuery, "album", page * PageSize));
             return chain;
         }
 
-        private IEnumerable<IndexerRequest> GetRequests(string searchQuery, string searchType)
+        private IEnumerable<IndexerRequest> GetRequests(string searchQuery, string searchType, int offset = 0)
         {
             HandleToken();
 
-            string formattedQuery = Uri.EscapeDataString(searchQuery)
-                .Replace(":", "%3A");    // Encode colons as %3A for filters
+            string formattedQuery = Uri.EscapeDataString(searchQuery).Replace(":", "%3A");
+            string url = $"https://api.spotify.com/v1/search?q={formattedQuery}&type={searchType}&limit={PageSize}&offset={offset}";
 
-            for (int page = 0; page < MaxPages; page++)
-            {
-                int offset = page * PageSize;
-                string url = $"https://api.spotify.com/v1/search?q={formattedQuery}&type={searchType}&limit={PageSize}&offset={offset}";
-
-                IndexerRequest req = new(url, HttpAccept.Json);
-                req.HttpRequest.Headers.Add("Authorization", $"Bearer {_token}");
-
-                _logger.Trace($"Created search request for query '{searchQuery}' (page {page + 1}): {url}");
-                yield return req;
-            }
+            IndexerRequest req = new(url, HttpAccept.Json);
+            req.HttpRequest.Headers.Add("Authorization", $"Bearer {_token}");
+            _logger.Trace($"Created search request for query '{searchQuery}' (offset {offset}): {url}");
+            yield return req;
         }
 
         private void HandleToken()
@@ -124,7 +118,7 @@ namespace NzbDrone.Core.Indexers.Spotify
                     return false;
                 }
                 return true;
-            });
+            }, new() { NumberOfAttempts = 1 });
         }
     }
 }

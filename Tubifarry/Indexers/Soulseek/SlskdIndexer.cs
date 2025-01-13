@@ -4,10 +4,11 @@ using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser;
 using System.Net;
 
-namespace NzbDrone.Core.Indexers.Soulseek
+namespace Tubifarry.Indexers.Soulseek
 {
     public class SlskdIndexer : HttpIndexerBase<SlskdSettings>
     {

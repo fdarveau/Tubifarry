@@ -1,15 +1,18 @@
 ﻿using NLog;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Parser.Model;
+using Tubifarry.Core.Records;
+using Tubifarry.Core.Utilities;
 using Xabe.FFmpeg;
 using Xabe.FFmpeg.Downloader;
 using YouTubeMusicAPI.Models.Info;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Model
 {
     internal class AudioMetadataHandler
     {
         private readonly Logger? _logger;
+        private static bool? _isFFmpegInstalled = null;
 
         public string TrackPath { get; private set; }
         public Lyric? Lyric { get; set; }
@@ -22,7 +25,6 @@ namespace Tubifarry.Core
             TrackPath = originalPath;
             _logger = NzbDroneLogger.GetLogger(this); ;
         }
-
 
         private static readonly Dictionary<AudioFormat, string[]> ConversionParameters = new()
         {
@@ -50,7 +52,7 @@ namespace Tubifarry.Core
 
         public async Task<bool> TryConvertToFormatAsync(AudioFormat audioFormat)
         {
-            if (!FFmpegIsInstalled)
+            if (!CheckFFmpegInstalled())
                 return false;
 
             if (!await TryExtractAudioFromVideoAsync())
@@ -122,7 +124,7 @@ namespace Tubifarry.Core
 
         public async Task<bool> TryExtractAudioFromVideoAsync()
         {
-            if (!FFmpegIsInstalled)
+            if (!CheckFFmpegInstalled())
                 return false;
 
             bool isVideo = await IsVideoContainerAsync();
@@ -271,12 +273,77 @@ namespace Tubifarry.Core
             return true;
         }
 
-        public static bool FFmpegIsInstalled => !string.IsNullOrEmpty(FFmpeg.ExecutablesPath) && Directory.GetFiles(FFmpeg.ExecutablesPath, "ffmpeg.*").Any();
+
+        public static bool CheckFFmpegInstalled()
+        {
+            if (_isFFmpegInstalled.HasValue)
+                return _isFFmpegInstalled.Value;
+
+            bool isInstalled = false;
+
+            if (!string.IsNullOrEmpty(FFmpeg.ExecutablesPath) && Directory.Exists(FFmpeg.ExecutablesPath))
+            {
+                string[] ffmpegPatterns = new[] { "ffmpeg", "ffmpeg.exe", "ffmpeg.bin" };
+                string[] files = Directory.GetFiles(FFmpeg.ExecutablesPath);
+                if (files.Any(file => ffmpegPatterns.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase) && IsExecutable(file)))
+                    isInstalled = true;
+            }
+
+            if (!isInstalled)
+            {
+                string[] paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? Array.Empty<string>();
+                foreach (string path in paths)
+                {
+                    if (Directory.Exists(path))
+                    {
+                        string[] ffmpegPatterns = new[] { "ffmpeg", "ffmpeg.exe", "ffmpeg.bin" };
+                        string[] files = Directory.GetFiles(path);
+
+                        if (files.Any(file => ffmpegPatterns.Contains(Path.GetFileName(file), StringComparer.OrdinalIgnoreCase) && IsExecutable(file)))
+                        {
+                            isInstalled = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            _isFFmpegInstalled = isInstalled;
+            return isInstalled;
+        }
+
+
+        private static bool IsExecutable(string filePath)
+        {
+            try
+            {
+                using FileStream stream = File.OpenRead(filePath);
+                byte[] magicNumber = new byte[4];
+                stream.Read(magicNumber, 0, 4);
+
+                if (magicNumber[0] == 0x4D && magicNumber[1] == 0x5A)
+                    return true;
+                if (magicNumber[0] == 0x7F && magicNumber[1] == 0x45 && magicNumber[2] == 0x4C && magicNumber[3] == 0x46)
+                    return true;
+                if (magicNumber[0] == 0xCF && magicNumber[1] == 0xFA && magicNumber[2] == 0xED && magicNumber[3] == 0xFE)
+                    return true;
+                if (magicNumber[0] == 0xCE && magicNumber[1] == 0xFA && magicNumber[2] == 0xED && magicNumber[3] == 0xFE)
+                    return true;
+            }
+            catch
+            {
+            }
+
+            return false;
+        }
+
+        public static void ResetFFmpegInstallationCheck() => _isFFmpegInstalled = null;
 
         public static Task InstallFFmpeg(string path)
         {
+            ResetFFmpegInstallationCheck();
             FFmpeg.SetExecutablesPath(path);
-            return FFmpegIsInstalled ? Task.CompletedTask : FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, path);
+            return CheckFFmpegInstalled() ? Task.CompletedTask : FFmpegDownloader.GetLatestVersion(FFmpegVersion.Official, path);
         }
     }
 }

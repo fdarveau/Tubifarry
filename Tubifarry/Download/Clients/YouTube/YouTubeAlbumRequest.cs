@@ -5,19 +5,20 @@ using NLog;
 using NzbDrone.Common.Disk;
 using NzbDrone.Common.Instrumentation;
 using NzbDrone.Core.Download;
-using NzbDrone.Core.Download.Clients.YouTube;
 using NzbDrone.Core.Music;
 using NzbDrone.Core.Parser.Model;
 using Requests;
 using Requests.Options;
 using System.Text;
-using Tubifarry.Core;
+using Tubifarry.Core.Model;
+using Tubifarry.Core.Records;
+using Tubifarry.Core.Utilities;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models;
 using YouTubeMusicAPI.Models.Info;
 using YouTubeMusicAPI.Models.Streaming;
 
-namespace Tubifarry.Download.Clients
+namespace Tubifarry.Download.Clients.YouTube
 {
     internal class YouTubeAlbumRequest : Request<YouTubeAlbumOptions, string, string>
     {

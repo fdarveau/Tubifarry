@@ -9,13 +9,12 @@ Additionally, Tubifarry supports fetching soundtracks from **Sonarr** (series) a
 
 ## Table of Contents 📑
 
-1. [Tubifarry for Lidarr 🎶](#tubifarry-for-lidarr-)
-2. [Installation 🚀](#installation-)
-3. [Soulseek (Slskd) Setup 🎧](#soulseek-slskd-setup-)
-4. [YouTube Downloader Setup 🎥](#youtube-downloader-setup-)
-5. [Fetching Soundtracks 🎬🎵](#fetching-soundtracks-from-sonarr-and-radarr-)
-6. [Queue Cleaner 🧹](#queue-cleaner-)
-7. [Troubleshooting 🛠️](#troubleshooting-)
+1. [Installation 🚀](#installation-)
+2. [Soulseek (Slskd) Setup 🎧](#soulseek-slskd-setup-)
+3. [YouTube Downloader Setup 🎥](#youtube-downloader-setup-)
+4. [Fetching Soundtracks 🎬🎵](#fetching-soundtracks-from-sonarr-and-radarr-)
+5. [Queue Cleaner 🧹](#queue-cleaner-)
+6. [Troubleshooting 🛠️](#troubleshooting-%EF%B8%8F)
 
 ----
 
@@ -64,6 +63,10 @@ Tubifarry supports **Slskd**, the Soulseek client, as both an **indexer** and **
 ### YouTube Downloader Setup 🎥  
 Tubifarry allows you to download music directly from YouTube. Follow the steps below to configure the YouTube downloader.  
 
+#### **Configure the Indexer**:  
+1. Navigate to `Settings -> Indexers` and click **Add**.  
+2. In the modal, select `Tubifarry` (located under **Other** at the bottom).  
+
 #### **Setting Up the YouTube Download Client**:  
 1. Go to `Settings -> Download Clients` and click **Add**.  
 2. Select `Youtube` from the list of download clients.  
@@ -81,9 +84,6 @@ Tubifarry allows you to download music directly from YouTube. Follow the steps b
    AAC (Advanced Audio Coding) is a high-quality audio format that offers better sound quality than MP3 at similar bitrates. It is commonly used in MP4 containers, making it a versatile and widely supported format.  
 
    **Note**: For higher-quality audio (e.g., 256kb/s), you need a **YouTube Premium subscription**.  
-
-3. **Saving .lrc Files**:  
-   If you want to save **.lrc files** (lyric files), navigate to **Media Management > Advanced Settings > Import Extra Files** and add `lrc` to the list of supported file types. This ensures that lyric files are imported and saved alongside your music files.  
 
 ---
 
@@ -120,18 +120,28 @@ The **Queue Cleaner** automatically processes items in your Lidarr queue that ha
 ---
 
 ## Troubleshooting 🛠️  
-- **Slskd Download Path Permissions**: Ensure Lidarr has read/write access to the Slskd download path. Verify folder permissions and ensure the user running Lidarr has the necessary access. For Docker setups, confirm the volume is correctly mounted and permissions are set.  
-- **Optional: FFmpeg Issues**: If you choose to use FFmpeg and songs fail to process, verify that FFmpeg is correctly installed and accessible in your system's PATH. If not, try reinstalling or downloading it manually.  
-- **Metadata Issues**: If metadata is not being added to downloaded files, confirm that the files are in a supported format. If using FFmpeg, ensure it is extracting audio to formats like AAC embedded in MP4 containers (check debug logs).  
-- **No Release Found**: If no release is found, YouTube might flag the plugin as a bot (which it technically is). To avoid this and access higher-quality audio, you can log in using cookies.  
-  - **Steps to Use Cookies**:  
-    1. Install the **cookies.txt** extension for your browser:  
-       - [Get cookies.txt for Chrome](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)  
-       - [Get cookies.txt for Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/)  
-    2. Log in to YouTube and save the cookies.txt file in a folder accessible by Lidarr.  
-    3. Go to the **Indexer and Downloader** settings in Lidarr and add the file path to the cookies.txt file.  
 
----
+- **Slskd Download Path Permissions**:  
+  Ensure Lidarr has read/write access to the Slskd download path. Verify folder permissions and confirm the user running Lidarr has the necessary access. For Docker setups, double-check that the volume is correctly mounted and permissions are properly configured.  
+
+- **FFmpeg Issues (Optional)**:  
+  If you’re using FFmpeg and songs fail to process, ensure FFmpeg is installed correctly and accessible in your system’s PATH. If issues persist, try reinstalling FFmpeg or downloading it manually.  
+
+- **Metadata Issues**:  
+  If metadata isn’t being added to downloaded files, confirm the files are in a supported format. If using FFmpeg, check that it’s extracting audio to compatible formats like AAC embedded in MP4 containers. Review debug logs for further details.  
+
+- **No Release Found**:  
+  If no release is found, YouTube may flag the plugin as a bot. To avoid this and access higher-quality audio, log in using cookies:  
+  1. Install the **cookies.txt** extension for your browser:  
+     - [Chrome](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc)  
+     - [Firefox](https://addons.mozilla.org/en-US/firefox/addon/cookies-txt/)  
+  2. Log in to YouTube and save the `cookies.txt` file in a folder accessible by Lidarr.  
+  3. In Lidarr, go to **Indexer and Downloader Settings** and provide the path to the `cookies.txt` file.  
+
+- **No Lyrics Imported**:  
+  To save `.lrc` files (lyric files), navigate to **Media Management > Advanced Settings > Import Extra Files** and add `lrc` to the list of supported file types. This ensures lyric files are imported and saved alongside your music files.  
+
+--- 
 
 ## Acknowledgments 🙌  
 Special thanks to [**trevTV**](https://github.com/TrevTV) for laying the groundwork with his plugins. Additionally, thanks to [**IcySnex**](https://github.com/IcySnex) for providing the YouTube API. 🎉  

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Model
 {
     public class FileCache
     {

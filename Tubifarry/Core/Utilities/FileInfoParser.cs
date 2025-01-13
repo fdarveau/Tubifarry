@@ -1,10 +1,9 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Utilities
 {
     public class FileInfoParser
     {
-
         public string? Artist { get; private set; }
         public string? Title { get; private set; }
         public int TrackNumber { get; private set; }
@@ -16,7 +15,6 @@ namespace Tubifarry.Core
             Tuple.Create(@"a-z0-9,\(\)\.&'’\s", @"\s_-"),
             Tuple.Create(@"a-z0-9,\(\)\.\&'’_", @"\s-")
         };
-
 
         public FileInfoParser(string filePath)
         {

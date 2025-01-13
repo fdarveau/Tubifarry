@@ -3,10 +3,11 @@ using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser;
 using Requests;
 
-namespace NzbDrone.Core.Indexers.Spotify
+namespace Tubifarry.Indexers.Spotify
 {
     internal class TubifarryIndexer : HttpIndexerBase<SpotifyIndexerSettings>
     {

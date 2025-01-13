@@ -1,9 +1,10 @@
 using NzbDrone.Common.Extensions;
+using NzbDrone.Core.Blocklisting;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
 
-namespace NzbDrone.Core.Blocklisting
+namespace Tubifarry.Blocklisting
 {
     public abstract class BaseBlocklist<TProtocol> : IBlocklistForProtocol where TProtocol : IDownloadProtocol
     {

@@ -1,8 +1,9 @@
 using NLog;
 using NzbDrone.Core.Indexers;
+using NzbDrone.Core.Plugins;
 using NzbDrone.Core.Profiles.Delay;
 
-namespace NzbDrone.Core.Plugins
+namespace Tubifarry
 {
     public class Tubifarry : Plugin
     {

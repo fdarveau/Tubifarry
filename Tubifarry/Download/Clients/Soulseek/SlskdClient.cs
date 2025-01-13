@@ -4,14 +4,18 @@ using NzbDrone.Common.Disk;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Download;
+using NzbDrone.Core.Download.Clients;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.RemotePathMappings;
 using System.Net;
 using System.Text.Json;
-using Tubifarry.Core;
+using Tubifarry.Core.Model;
+using Tubifarry.Core.Records;
+using Tubifarry.Core.Utilities;
 
-namespace NzbDrone.Core.Download.Clients.Soulseek
+namespace Tubifarry.Download.Clients.Soulseek
 {
     public class SlskdClient : DownloadClientBase<SlskdProviderSettings>
     {
@@ -24,7 +28,6 @@ namespace NzbDrone.Core.Download.Clients.Soulseek
 
         public SlskdClient(IHttpClient httpClient, IConfigService configService, IDiskProvider diskProvider, IRemotePathMappingService remotePathMappingService, Logger logger)
             : base(configService, diskProvider, remotePathMappingService, logger) => _httpClient = httpClient;
-
 
         public override async Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer)
         {

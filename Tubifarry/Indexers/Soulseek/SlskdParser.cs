@@ -3,11 +3,13 @@ using Newtonsoft.Json;
 using NLog;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Parser.Model;
 using System.Text.Json;
-using Tubifarry.Core;
+using Tubifarry.Core.Model;
+using Tubifarry.Core.Utilities;
 
-namespace NzbDrone.Core.Indexers.Soulseek
+namespace Tubifarry.Indexers.Soulseek
 {
     public class SlskdParser : IParseIndexerResponse
     {
@@ -91,7 +93,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
 
 
             if (!mostCommonBitRate.HasValue && totalDuration > 0)
-                mostCommonBitRate = (int)((totalSize * 8) / (totalDuration * 1000));
+                mostCommonBitRate = (int)(totalSize * 8 / (totalDuration * 1000));
 
             List<SlskdFileData>? filesToDownload = directory.GroupBy(f => f.Filename?[..f.Filename.LastIndexOf('\\')]).FirstOrDefault(g => g.Key == directory.Key)?.ToList();
             AudioFormat codec = AudioFormatHelper.GetAudioCodecFromExtension(mostCommonExtension ?? string.Empty);
@@ -101,7 +103,7 @@ namespace NzbDrone.Core.Indexers.Soulseek
                 ArtistName = artist ?? "Unknown Artist",
                 AlbumName = album ?? "Unknown Album",
                 ReleaseDate = folderData.Year,
-                ReleaseDateTime = (string.IsNullOrEmpty(folderData.Year) || !int.TryParse(folderData.Year, out int yearInt) ? DateTime.MinValue : new DateTime(yearInt, 1, 1)),
+                ReleaseDateTime = string.IsNullOrEmpty(folderData.Year) || !int.TryParse(folderData.Year, out int yearInt) ? DateTime.MinValue : new DateTime(yearInt, 1, 1),
                 Codec = codec,
                 BitDepth = mostCommonBitDepth ?? 0,
                 Bitrate = (codec == AudioFormat.MP3 ? AudioFormatHelper.RoundToStandardBitrate(mostCommonBitRate ?? 0) : mostCommonBitRate) ?? 0,

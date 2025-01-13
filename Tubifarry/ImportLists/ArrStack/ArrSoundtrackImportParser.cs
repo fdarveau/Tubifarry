@@ -2,15 +2,17 @@
 using NLog;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.Parser.Model;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using Tubifarry.Core;
+using Tubifarry.Core.Model;
+using Tubifarry.Core.Records;
 
-namespace NzbDrone.Core.ImportLists.ArrStack
+namespace Tubifarry.ImportLists.ArrStack
 {
     internal class ArrSoundtrackImportParser : IParseImportListResponse
     {

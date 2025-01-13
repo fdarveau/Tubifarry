@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 using NzbDrone.Core.Parser.Model;
 using System.Text.RegularExpressions;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Records
 {
 
     public record Lyric(string? PlainLyrics, SyncLyric? SyncedLyrics)
@@ -21,19 +21,19 @@ namespace Tubifarry.Core
 
     public class SyncLyric : List<SyncLine> { }
 
-    public class SyncLine
+    public record class SyncLine
     {
         [JsonProperty("lrc_timestamp")]
-        public string? LrcTimestamp { get; set; }
+        public string? LrcTimestamp { get; init; }
 
         [JsonProperty("milliseconds")]
-        public string? Milliseconds { get; set; }
+        public string? Milliseconds { get; init; }
 
         [JsonProperty("duration")]
-        public string? Duration { get; set; }
+        public string? Duration { get; init; }
 
         [JsonProperty("line")]
-        public string? Line { get; set; }
+        public string? Line { get; init; }
 
         public static SyncLyric ParseSyncedLyrics(string syncedLyrics)
         {

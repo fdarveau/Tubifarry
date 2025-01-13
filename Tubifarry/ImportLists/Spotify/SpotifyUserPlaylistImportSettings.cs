@@ -1,7 +1,8 @@
 ﻿using FluentValidation;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.ImportLists.Spotify;
 
-namespace NzbDrone.Core.ImportLists.Spotify
+namespace Tubifarry.ImportLists.Spotify
 {
     public class SpotifyUserPlaylistImportSettingsValidator : SpotifySettingsBaseValidator<SpotifyUserPlaylistImportSettings>
     {

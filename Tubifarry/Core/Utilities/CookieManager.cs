@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Utilities
 {
     internal class CookieManager
     {

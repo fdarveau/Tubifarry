@@ -3,9 +3,10 @@ using NzbDrone.Common.Extensions;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Music;
+using NzbDrone.Core.Notifications;
 using NzbDrone.Core.ThingiProvider;
 
-namespace NzbDrone.Core.Notifications
+namespace Tubifarry.Notifications.QueueCleaner
 {
     public class ImportFailureNotificationService : IHandle<AlbumImportIncompleteEvent>
     {
@@ -20,7 +21,6 @@ namespace NzbDrone.Core.Notifications
             _notificationStatusService = notificationStatusService;
             _logger = logger;
         }
-
 
         private bool ShouldHandleArtist(ProviderDefinition definition, Artist artist)
         {
@@ -39,12 +39,11 @@ namespace NzbDrone.Core.Notifications
             return false;
         }
 
-
         public void Handle(AlbumImportIncompleteEvent message)
         {
             foreach (INotification? notification in _notificationFactory.OnImportFailureEnabled())
             {
-                if (notification is not QueueCleaner.QueueCleaner queue)
+                if (notification is not QueueCleaner queue)
                     continue;
                 try
                 {

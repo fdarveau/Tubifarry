@@ -1,9 +1,10 @@
 ﻿using FluentValidation;
 using NzbDrone.Core.Annotations;
+using NzbDrone.Core.ImportLists;
 using NzbDrone.Core.Validation;
 using NzbDrone.Core.Validation.Paths;
 
-namespace NzbDrone.Core.ImportLists.ArrStack
+namespace Tubifarry.ImportLists.ArrStack
 {
     public class ArrSoundtrackImportSettingsValidator : AbstractValidator<ArrSoundtrackImportSettings>
     {

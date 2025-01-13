@@ -1,6 +1,6 @@
-﻿using NzbDrone.Core.Download.Clients.YouTube;
+﻿using Tubifarry.Download.Clients.YouTube;
 
-namespace Tubifarry.Core
+namespace Tubifarry.Core.Utilities
 {
     public enum AudioFormat
     {

@@ -8,15 +8,17 @@ using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Music;
+using NzbDrone.Core.Notifications;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.ThingiProvider;
 using System.IO.Abstractions;
-using Tubifarry.Core;
+using Tubifarry.Core.Utilities;
+using Tubifarry.Notifications.Queue;
 
-namespace NzbDrone.Core.Notifications.QueueCleaner
+namespace Tubifarry.Notifications.QueueCleaner
 {
-    internal class QueueCleaner : NotificationBase<QueueCleanerSettings>
+    public class QueueCleaner : NotificationBase<QueueCleanerSettings>
     {
         private readonly Logger _logger;
         private readonly IDiskProvider _diskProvider;
@@ -83,7 +85,10 @@ namespace NzbDrone.Core.Notifications.QueueCleaner
                 return;
 
             if (Settings.RenameOption != (int)RenameOptions.DoNotRename && Rename(trackedDownload))
+            {
                 Retry(trackedDownload);
+                return;
+            }
 
             if (Settings.BlocklistOption == (int)BlocklistOptions.RemoveAndBlocklist || Settings.BlocklistOption == (int)BlocklistOptions.BlocklistOnly)
                 Blocklist(trackedDownload);
