@@ -27,14 +27,20 @@ namespace Tubifarry.Core.Model
         }
 
         private static readonly Dictionary<AudioFormat, string[]> ConversionParameters = new()
-        {
-            { AudioFormat.AAC, new[] { "-codec:a aac", "-q:a 0", "-movflags +faststart" } },
-            { AudioFormat.MP3, new[] { "-codec:a libmp3lame", "-q:a 0", "-preset insane" } },
-            { AudioFormat.Opus, new[] { "-codec:a libopus", "-vbr on", "-compression_level 10", "-application audio" } },
-            { AudioFormat.Vorbis, new[] { "-codec:a libvorbis", "-q:a 7" } },
-            { AudioFormat.FLAC, new[] { "-codec:a flac" } },
-            { AudioFormat.WAV, new[] { "-codec:a pcm_s16le" } }
-        };
+{
+    { AudioFormat.AAC,    new[] { "-codec:a aac", "-q:a 0", "-movflags +faststart" } },
+    { AudioFormat.MP3,    new[] { "-codec:a libmp3lame", "-q:a 0", "-preset insane" } },
+    { AudioFormat.Opus,   new[] { "-codec:a libopus", "-vbr on", "-compression_level 10", "-application audio" } },
+    { AudioFormat.Vorbis, new[] { "-codec:a libvorbis", "-q:a 7" } },
+    { AudioFormat.FLAC,   new[] { "-codec:a flac" } },
+    { AudioFormat.WAV,    new[] { "-codec:a pcm_s16le" } },
+    { AudioFormat.MP4,    new[] { "-codec:a aac", "-q:a 0", "-movflags +faststart" } },
+    { AudioFormat.AIFF,   new[] { "-codec:a pcm_s16le" } },
+    { AudioFormat.OGG,    new[] { "-codec:a libvorbis", "-q:a 7" } },
+    { AudioFormat.AMR,    new[] { "-codec:a libopencore_amrnb", "-ar 8000", "-ab 12.2k" } },
+    { AudioFormat.WMA,    new[] { "-codec:a wmav2", "-b:a 192k" } }
+};
+
 
         private static readonly string[] ExtractionParameters = new[]
 {

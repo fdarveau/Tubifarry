@@ -57,7 +57,7 @@ namespace Tubifarry.Indexers.Soulseek
 
             // Include File Extensions validation
             RuleFor(c => c.IncludeFileExtensions)
-                .Must(extensions => extensions == null || extensions.All(ext => !ext.Contains(".")))
+                .Must(extensions => extensions == null || extensions.All(ext => !ext.Contains('.')))
                 .WithMessage("File extensions must not contain a dot ('.').");
         }
     }
@@ -78,7 +78,7 @@ namespace Tubifarry.Indexers.Soulseek
         [FieldDefinition(3, Type = FieldType.Checkbox, Label = "Include Only Audio Files", HelpText = "When enabled, only files with audio extensions will be included in search results. Disabling this option allows all file types.", Advanced = false)]
         public bool OnlyAudioFiles { get; set; } = true;
 
-        [FieldDefinition(4, Type = FieldType.ArtistTag, Label = "Include File Extensions", HelpText = "Specify file extensions to include when 'Include Only Audio Files' is enabled. This setting has no effect if 'Include Only Audio Files' is disabled.", Advanced = true)]
+        [FieldDefinition(4, Type = FieldType.Tag, Label = "Include File Extensions", HelpText = "Specify file extensions to include when 'Include Only Audio Files' is enabled. This setting has no effect if 'Include Only Audio Files' is disabled.", Advanced = true)]
         public IEnumerable<string> IncludeFileExtensions { get; set; } = Array.Empty<string>();
 
         [FieldDefinition(5, Label = "Enable Fallback Search", Type = FieldType.Checkbox, HelpText = "If no results are found, perform a secondary search using additional metadata.", Advanced = true)]

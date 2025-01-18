@@ -14,7 +14,8 @@ Additionally, Tubifarry supports fetching soundtracks from **Sonarr** (series) a
 3. [YouTube Downloader Setup 🎥](#youtube-downloader-setup-)
 4. [Fetching Soundtracks 🎬🎵](#fetching-soundtracks-from-sonarr-and-radarr-)
 5. [Queue Cleaner 🧹](#queue-cleaner-)
-6. [Troubleshooting 🛠️](#troubleshooting-%EF%B8%8F)
+6. [Codec Tinker 🎛️](#codec-tinker-️)
+7. [Troubleshooting 🛠️](#troubleshooting-%EF%B8%8F)
 
 ----
 
@@ -102,7 +103,7 @@ To enable this feature:
 
 ---
 
-## Queue Cleaner 🧹  
+### Queue Cleaner 🧹  
 
 The **Queue Cleaner** automatically processes items in your Lidarr queue that have **failed to import**. It ensures your library stays organized by handling failed imports based on your preferences.  
 
@@ -116,6 +117,33 @@ The **Queue Cleaner** automatically processes items in your Lidarr queue that ha
    - Navigate to `Settings -> Connect` in Lidarr.  
    - Add a new connection and select the **Queue Cleaner**.  
    - Configure the settings to match your needs.  
+
+---
+
+### Codec Tinker 🎛️
+
+**Codec Tinker** is a feature in Tubifarry that lets you **convert audio files** between different formats using FFmpeg. Whether you want to standardize your library or optimize files for specific devices, Codec Tinker makes it easy to tinker with your audio formats.
+
+#### How to Enable Codec Tinker
+
+1. Go to `Settings > Metadata` in Lidarr.  
+2. Open the **Codec Tinker** MetadataConsumer.  
+3. Toggle the switch to enable the feature.  
+
+#### How to Use Codec Tinker
+
+1. **Set Default Conversion Settings**  
+   - **Target Format**:  
+     Choose the default format for conversions (e.g., FLAC, Opus, MP3).  
+
+   - **Custom Conversion Rules**:  
+     Define rules like `wavTOflac` or `AAC_to_MP3` for specific format conversions.  
+
+   **Note**: Lossy formats (e.g., MP3, AAC) cannot be converted to non-lossy formats (e.g., FLAC, WAV).  
+
+2. **Enable Format-Specific Conversion**  
+   Toggle checkboxes to enable conversion for specific formats:  
+   - **Convert MP3**, **Convert AAC**, **Convert FLAC**, etc.  
 
 ---
 
@@ -141,6 +169,8 @@ The **Queue Cleaner** automatically processes items in your Lidarr queue that ha
 - **No Lyrics Imported**:  
   To save `.lrc` files (lyric files), navigate to **Media Management > Advanced Settings > Import Extra Files** and add `lrc` to the list of supported file types. This ensures lyric files are imported and saved alongside your music files.  
 
+- **Unsupported Formats**: Verify custom rules and target formats.
+
 --- 
 
 ## Acknowledgments 🙌  
@@ -154,7 +184,7 @@ If you'd like to contribute to Tubifarry, feel free to open issues or submit pul
 ---
 
 ## License 📄  
-Tubifarry is licensed under the MIT License. See the [LICENSE](https://github.com/TypNull/Tubifarry/blob/master/LICENSE) file for more details.  
+Tubifarry is licensed under the MIT License. See the [LICENSE](https://github.com/TypNull/Tubifarry/blob/master/LICENSE.txt) file for more details.  
 
 ---
 

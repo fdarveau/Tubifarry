@@ -60,6 +60,7 @@ namespace Tubifarry.Download.Clients.YouTube
         {
             if (Settings.ReEncode != (int)ReEncodeOptions.Disabled)
             {
+                string old = FFmpeg.ExecutablesPath;
                 FFmpeg.SetExecutablesPath(Settings.FFmpegPath);
                 AudioMetadataHandler.ResetFFmpegInstallationCheck();
                 if (!AudioMetadataHandler.CheckFFmpegInstalled())
@@ -70,6 +71,7 @@ namespace Tubifarry.Download.Clients.YouTube
                     }
                     catch (Exception ex)
                     {
+                        FFmpeg.SetExecutablesPath(old);
                         return new ValidationFailure("FFmpegInstallation", $"Failed to install FFmpeg: {ex.Message}");
                     }
                 }
