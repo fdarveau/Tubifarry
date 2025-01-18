@@ -13,7 +13,7 @@ namespace Tubifarry.Indexers.Spotify
     {
         public override string Name => "Tubifarry";
         public override string Protocol => nameof(YoutubeDownloadProtocol);
-        public override bool SupportsRss => false;
+        public override bool SupportsRss => true;
         public override bool SupportsSearch => true;
         public override int PageSize => 50;
         public override TimeSpan RateLimit => new(3);
