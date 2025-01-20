@@ -39,11 +39,11 @@ namespace Tubifarry.Indexers.Soulseek
                     return new List<ReleaseInfo>();
                 }
 
-                SlskdSearchData searchTextData = SlskdSearchData.ParseSearchText(indexerResponse.Request);
+                SlskdSearchData searchTextData = SlskdSearchData.FromJson(indexerResponse.HttpRequest.ContentSummary);
 
                 foreach (JsonElement responseElement in GetResponses(responsesElement))
                 {
-                    if (!responseElement.TryGetProperty("fileCount", out JsonElement fileCountElement) || fileCountElement.GetInt32() == 0)
+                    if (!responseElement.TryGetProperty("fileCount", out JsonElement fileCountElement) || fileCountElement.GetInt32() < searchTextData.MinimumFiles)
                         continue;
                     if (!responseElement.TryGetProperty("files", out JsonElement filesElement))
                         continue;
@@ -59,8 +59,8 @@ namespace Tubifarry.Indexers.Soulseek
                         albumDatas.Add(albumData);
                     }
                 }
-                if (bool.TryParse(indexerResponse.HttpRequest.Headers["X-INTERACTIVE"], out bool delay) && idElement.GetString() is string searchID)
-                    RemoveSearch(searchID, albumDatas.Any() && delay);
+                if (idElement.GetString() is string searchID)
+                    RemoveSearch(searchID, albumDatas.Any() && searchTextData.Interactive);
             }
             catch (Exception ex)
             {

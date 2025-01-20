@@ -93,16 +93,25 @@ namespace Tubifarry.Indexers.Soulseek
         [FieldDefinition(8, Type = FieldType.Number, Label = "Maximum Peer Queue Length", HelpText = "Maximum number of queued requests allowed per peer.", Advanced = true)]
         public int MaximumPeerQueueLength { get; set; } = 1000000;
 
+        private int _minimumPeerUploadSpeedBytes;
+
         [FieldDefinition(9, Type = FieldType.Number, Label = "Minimum Peer Upload Speed", Unit = "KB/s", HelpText = "Minimum upload speed required for peers (in KB/s).", Advanced = true)]
-        public int MinimumPeerUploadSpeed { get; set; } = 0;
+        public int MinimumPeerUploadSpeed
+        {
+            get => _minimumPeerUploadSpeedBytes / 1024;
+            set => _minimumPeerUploadSpeedBytes = value * 1024;
+        }
 
         [FieldDefinition(10, Type = FieldType.Number, Label = "Minimum Response File Count", HelpText = "Minimum number of files required in a search response.", Advanced = true)]
         public int MinimumResponseFileCount { get; set; } = 1;
 
-        [FieldDefinition(11, Type = FieldType.Number, Label = "Response Limit", HelpText = "Maximum number of search responses to return.", Advanced = true)]
+        [FieldDefinition(11, Type = FieldType.Checkbox, Label = "Filter Less Tracks than Album", HelpText = "Enable to filter out releases that have fewer tracks than the expected album count.", Advanced = true)]
+        public bool FilterLessFilesThanAlbum { get; set; }
+
+        [FieldDefinition(12, Type = FieldType.Number, Label = "Response Limit", HelpText = "Maximum number of search responses to return.", Advanced = true)]
         public int ResponseLimit { get; set; } = 100;
 
-        [FieldDefinition(12, Type = FieldType.Number, Label = "Timeout", Unit = "seconds", HelpText = "Timeout for search requests in seconds.", Advanced = true)]
+        [FieldDefinition(13, Type = FieldType.Number, Label = "Timeout", Unit = "seconds", HelpText = "Timeout for search requests in seconds.", Advanced = true)]
         public double TimeoutInSeconds { get; set; } = 5;
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));

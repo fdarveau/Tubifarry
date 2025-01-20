@@ -1,6 +1,5 @@
-﻿using NzbDrone.Core.Indexers;
-using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Tubifarry.Core.Utilities;
 
@@ -109,12 +108,13 @@ namespace Tubifarry.Indexers.Soulseek
         }
     }
 
-    public record SlskdSearchData(string? Artist, string? Album)
+    public record SlskdSearchData(
+        [property: JsonPropertyName("artist")] string? Artist,
+        [property: JsonPropertyName("album")] string? Album,
+        [property: JsonPropertyName("interactive")] bool Interactive,
+        [property: JsonPropertyName("mimimumFiles")] int MinimumFiles)
     {
-        public static SlskdSearchData ParseSearchText(IndexerRequest request) => new(
-            Artist: Encoding.UTF8.GetString(Convert.FromBase64String(request.HttpRequest.Headers["X-ARTIST"] ?? "")),
-            Album: Encoding.UTF8.GetString(Convert.FromBase64String(request.HttpRequest.Headers["X-ALBUM"] ?? ""))
-        );
+        public static SlskdSearchData FromJson(string jsonString) => JsonSerializer.Deserialize<SlskdSearchData>(jsonString, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true })!;
     }
 }
 

@@ -71,7 +71,8 @@ namespace Tubifarry.Download.Clients.YouTube
                     }
                     catch (Exception ex)
                     {
-                        FFmpeg.SetExecutablesPath(old);
+                        if (!string.IsNullOrEmpty(old))
+                            FFmpeg.SetExecutablesPath(old);
                         return new ValidationFailure("FFmpegInstallation", $"Failed to install FFmpeg: {ex.Message}");
                     }
                 }

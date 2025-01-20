@@ -2,10 +2,10 @@
 using NLog;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Instrumentation;
+using NzbDrone.Common.Serializer;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using System.Net;
-using System.Text;
 
 namespace Tubifarry.Indexers.Soulseek
 {
@@ -30,9 +30,10 @@ namespace Tubifarry.Indexers.Soulseek
         public IndexerPageableRequestChain GetSearchRequests(AlbumSearchCriteria searchCriteria)
         {
             _logger.Trace($"Generating search requests for album: {searchCriteria.AlbumQuery} by artist: {searchCriteria.ArtistQuery}");
+            int tarckCount = searchCriteria.Albums.FirstOrDefault()?.AlbumReleases.Value.Min(x => x.TrackCount) ?? 0;
             IndexerPageableRequestChain chain = new();
 
-            chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, searchCriteria.AlbumQuery, searchCriteria.InteractiveSearch));
+            chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, searchCriteria.AlbumQuery, searchCriteria.InteractiveSearch, tarckCount));
 
             if (!Settings.UseFallbackSearch)
                 return chain;
@@ -40,15 +41,15 @@ namespace Tubifarry.Indexers.Soulseek
             List<string> aliases = searchCriteria.Artist.Metadata.Value.Aliases;
             for (int i = 0; i < 2 && i < aliases.Count; i++)
                 if (aliases[i].Length > 3)
-                    chain.AddTier(DeferredGetRequests(aliases[i], searchCriteria.AlbumQuery, searchCriteria.InteractiveSearch));
+                    chain.AddTier(DeferredGetRequests(aliases[i], searchCriteria.AlbumQuery, searchCriteria.InteractiveSearch, tarckCount));
             if (searchCriteria.AlbumQuery.Length > 20)
             {
                 string[] albumWords = searchCriteria.AlbumQuery.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 int halfLength = (int)Math.Ceiling(albumWords.Length / 2.0);
                 string halfAlbumTitle = string.Join(" ", albumWords.Take(halfLength));
-                chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, halfAlbumTitle, searchCriteria.InteractiveSearch, searchCriteria.AlbumQuery));
+                chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, halfAlbumTitle, searchCriteria.InteractiveSearch, tarckCount));
             }
-            chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, null, searchCriteria.InteractiveSearch, searchCriteria.AlbumQuery));
+            chain.AddTier(DeferredGetRequests(searchCriteria.ArtistQuery, null, searchCriteria.InteractiveSearch, tarckCount));
             return chain;
         }
 
@@ -56,24 +57,26 @@ namespace Tubifarry.Indexers.Soulseek
         public IndexerPageableRequestChain GetSearchRequests(ArtistSearchCriteria searchCriteria)
         {
             _logger.Trace($"Generating search requests for artist: {searchCriteria.ArtistQuery}");
+            int tarckCount = searchCriteria.Albums.FirstOrDefault()?.AlbumReleases.Value.Min(x => x.TrackCount) ?? 0;
             IndexerPageableRequestChain chain = new();
             List<string> aliases = searchCriteria.Artist.Metadata.Value.Aliases;
             for (int i = 0; i < 3 && i < aliases.Count && Settings.UseFallbackSearch; i++)
                 if (aliases[i].Length > 3)
-                    chain.AddTier(DeferredGetRequests(aliases[i], null, searchCriteria.InteractiveSearch));
+                    chain.AddTier(DeferredGetRequests(aliases[i], null, searchCriteria.InteractiveSearch, tarckCount));
+
             return chain;
         }
 
 
-        private IEnumerable<IndexerRequest> DeferredGetRequests(string artist, string? album, bool interactive, string? fullAlbum = null)
+        private IEnumerable<IndexerRequest> DeferredGetRequests(string artist, string? album, bool interactive, int trackCount, string? fullAlbum = null)
         {
             _searchResultsRequest = null;
-            IndexerRequest? request = GetRequestsAsync(artist, album, interactive, fullAlbum).Result;
+            IndexerRequest? request = GetRequestsAsync(artist, album, interactive, trackCount, fullAlbum).Result;
             if (request != null)
                 yield return request;
         }
 
-        private async Task<IndexerRequest?> GetRequestsAsync(string artist, string? album, bool interactive, string? fullAlbum = null)
+        private async Task<IndexerRequest?> GetRequestsAsync(string artist, string? album, bool interactive, int trackCount, string? fullAlbum = null)
         {
             try
             {
@@ -105,10 +108,14 @@ namespace Tubifarry.Indexers.Soulseek
                 HttpRequest request = new HttpRequestBuilder($"{Settings.BaseUrl}/api/v0/searches/{searchData.Id}")
                     .AddQueryParam("includeResponses", true)
                     .SetHeader("X-API-KEY", Settings.ApiKey)
-                    .SetHeader("X-ALBUM", Convert.ToBase64String(Encoding.UTF8.GetBytes(fullAlbum ?? album ?? "")))
-                    .SetHeader("X-ARTIST", Convert.ToBase64String(Encoding.UTF8.GetBytes(artist)))
-                    .SetHeader("X-INTERACTIVE", interactive.ToString())
                     .Build();
+                request.ContentSummary = new
+                {
+                    Album = fullAlbum ?? album ?? "",
+                    Artist = artist,
+                    Interactive = interactive,
+                    MimimumFiles = Math.Max(Settings.MinimumResponseFileCount, Settings.FilterLessFilesThanAlbum ? 0 : 1)
+                }.ToJson();
 
                 return new IndexerRequest(request);
             }

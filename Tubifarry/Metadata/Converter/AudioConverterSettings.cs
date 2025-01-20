@@ -9,22 +9,21 @@ using Xabe.FFmpeg;
 
 namespace Tubifarry.Metadata.Converter
 {
-
     public class AudioConverterSettingsValidator : AbstractValidator<AudioConverterSettings>
     {
         public AudioConverterSettingsValidator()
         {
-            // Validate FFmpegPath (if re-encoding is enabled)
+            // Validate FFmpegPath
             RuleFor(x => x.FFmpegPath)
                 .NotEmpty()
-                .WithMessage("FFmpeg path is required when re-encoding is enabled.")
+                .WithMessage("FFmpeg path is required.")
                 .MustAsync(async (ffmpegPath, cancellationToken) => await TestFFmpeg(ffmpegPath))
                 .WithMessage("FFmpeg is not installed or invalid at the specified path.");
 
             // Validate custom conversion rules
             RuleFor(x => x.CustomConversion)
                 .Must(customConversions => customConversions == null || customConversions.All(IsValidConversionRule))
-                .WithMessage("Custom conversion rules must be in the format 'source->target' (e.g., 'mp3TOflac').");
+                .WithMessage("Custom conversion rules must be in the format 'source -> target' (e.g., mp3 to flac).");
 
             RuleFor(x => x.CustomConversion)
                 .Must(customConversions => customConversions == null || customConversions.All(IsValidLossyConversion))
@@ -35,34 +34,28 @@ namespace Tubifarry.Metadata.Converter
                 .WithMessage("Lossy formats cannot be converted to non-lossy formats.");
         }
 
-        private bool IsValidConversionRule(string rule)
+        private bool IsValidConversionRule(KeyValuePair<string, string> rule)
         {
-            if (string.IsNullOrWhiteSpace(rule))
+            if (string.IsNullOrWhiteSpace(rule.Key) || string.IsNullOrWhiteSpace(rule.Value))
                 return false;
 
-            string[] parts = rule.Split(new[] { "_to_", "TO" }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 2 || string.IsNullOrWhiteSpace(parts[0]) || string.IsNullOrWhiteSpace(parts[1]))
-                return false;
-
-            bool isValidSource = Enum.TryParse(parts[0], true, out AudioFormat sourceFormat) && sourceFormat != AudioFormat.Unknown;
-            bool isValidTarget = Enum.TryParse(parts[1], true, out AudioFormat targetFormat) && targetFormat != AudioFormat.Unknown;
+            bool isValidSource = Enum.TryParse(rule.Key, true, out AudioFormat sourceFormat) && sourceFormat != AudioFormat.Unknown;
+            bool isValidTarget = Enum.TryParse(rule.Value, true, out AudioFormat targetFormat) && targetFormat != AudioFormat.Unknown;
 
             return isValidSource && isValidTarget;
         }
 
-        private bool IsValidLossyConversion(string rule)
+        private bool IsValidLossyConversion(KeyValuePair<string, string> rule)
         {
-            if (string.IsNullOrWhiteSpace(rule))
+            if (string.IsNullOrWhiteSpace(rule.Key) || string.IsNullOrWhiteSpace(rule.Value))
                 return true;
-            string[] parts = rule.Split(new[] { "_to_", "TO" }, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 2)
-                return false;
 
-            if (!Enum.TryParse(parts[0], true, out AudioFormat sourceFormat) || !Enum.TryParse(parts[1], true, out AudioFormat targetFormat))
+            if (!Enum.TryParse(rule.Key, true, out AudioFormat sourceFormat) || !Enum.TryParse(rule.Value, true, out AudioFormat targetFormat))
                 return false;
 
             if (AudioFormatHelper.IsLossyFormat(sourceFormat) && !AudioFormatHelper.IsLossyFormat(targetFormat))
                 return false;
+
             return true;
         }
 
@@ -94,12 +87,11 @@ namespace Tubifarry.Metadata.Converter
                 }
                 catch
                 {
-                    FFmpeg.SetExecutablesPath(oldPath);
+                    if (!string.IsNullOrEmpty(oldPath))
+                        FFmpeg.SetExecutablesPath(oldPath);
                     return false;
                 }
             }
-
-            FFmpeg.SetExecutablesPath(oldPath);
             return true;
         }
     }
@@ -132,21 +124,8 @@ namespace Tubifarry.Metadata.Converter
         [FieldDefinition(8, Label = "Target Format", Type = FieldType.Select, SelectOptions = typeof(TargetAudioFormat), Section = MetadataSectionType.Metadata, HelpText = "Select the target format to convert audio files into.")]
         public int TargetFormat { get; set; } = (int)TargetAudioFormat.Opus;
 
-        private IEnumerable<string>? _customConversion;
-
-        [FieldDefinition(9, Label = "Custom Conversion Rules", Type = FieldType.Tag, Section = MetadataSectionType.Metadata, Unit = "xTOy", HelpText = "Specify custom conversion rules in the format 'source_to_target'. These rules will override the default settings.")]
-        public IEnumerable<string>? CustomConversion
-        {
-            get => _customConversion;
-            set
-            {
-                if (value == null || !value.Any())
-                    _customConversion = null;
-
-                else
-                    _customConversion = value;
-            }
-        }
+        [FieldDefinition(9, Label = "Custom Conversion Rules", Type = FieldType.KeyValueList, Section = MetadataSectionType.Metadata, HelpText = "Specify custom conversion rules in the format. These rules will override the default settings.")]
+        public IEnumerable<KeyValuePair<string, string>> CustomConversion { get; set; } = Array.Empty<KeyValuePair<string, string>>();
 
         public NzbDroneValidationResult Validate() => new(Validator.Validate(this));
     }

@@ -29,7 +29,6 @@ namespace Tubifarry.Metadata.Converter
             return null!;
         }
 
-
         public override List<ImageFileResult> ArtistImages(Artist artist) => default!;
 
         public override List<ImageFileResult> AlbumImages(Artist artist, Album album, string albumFolder) => default!;
@@ -61,21 +60,13 @@ namespace Tubifarry.Metadata.Converter
 
         private AudioFormat GetTargetFormatForTrack(AudioFormat trackFormat)
         {
-            if (Settings.CustomConversion != null)
-            {
-                foreach (string rule in Settings.CustomConversion)
-                {
-                    string[] parts = rule.Split(new[] { "TO", "_to_" }, StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length == 2 && parts[0].Equals(trackFormat.ToString(), System.StringComparison.OrdinalIgnoreCase))
+            foreach (KeyValuePair<string, string> rule in Settings.CustomConversion)
+                if (rule.Key.Equals(trackFormat.ToString(), StringComparison.OrdinalIgnoreCase))
+                    if (Enum.TryParse(rule.Value, true, out AudioFormat customTargetFormat))
                     {
-                        if (Enum.TryParse(parts[1], true, out AudioFormat customTargetFormat))
-                        {
-                            _logger.Trace("Using custom target format {0} for track format {1}", customTargetFormat, trackFormat);
-                            return customTargetFormat;
-                        }
+                        _logger.Trace("Using custom target format {0} for track format {1}", customTargetFormat, trackFormat);
+                        return customTargetFormat;
                     }
-                }
-            }
             return (AudioFormat)Settings.TargetFormat;
         }
 
@@ -88,7 +79,7 @@ namespace Tubifarry.Metadata.Converter
                 return false;
             }
 
-            bool shouldConvertCustom = Settings.CustomConversion != null && Settings.CustomConversion.Any(rule => rule.StartsWith(trackFormat.ToString(), StringComparison.OrdinalIgnoreCase));
+            bool shouldConvertCustom = Settings.CustomConversion.Any() && Settings.CustomConversion.Any(rule => rule.Key.Equals(trackFormat.ToString(), StringComparison.OrdinalIgnoreCase));
             bool shouldConvertDefault = IsFormatEnabledForConversion(trackFormat);
             bool shouldConvert = shouldConvertCustom || shouldConvertDefault;
             return shouldConvert;
