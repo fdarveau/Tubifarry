@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using System.Text.RegularExpressions;
+using FluentValidation;
 using NzbDrone.Core.Annotations;
 using NzbDrone.Core.ThingiProvider;
 using NzbDrone.Core.Validation;
@@ -50,6 +51,30 @@ namespace Tubifarry.Download.Clients.Soulseek
 
         [FieldDefinition(0, Label = "URL", Type = FieldType.Url, Placeholder = "http://localhost:5030", HelpText = "The URL of your Slskd instance.")]
         public string BaseUrl { get; set; } = "http://localhost:5030";
+
+        private string? _host;
+        public string Host
+        {
+            get
+            {
+                if (_host == null)
+                {
+                    var hostRegex = new Regex("(.+://)?(.+)(:|/)/");
+                    var hostMatch = hostRegex.Match(BaseUrl);
+                    if (!hostMatch.Success)
+                    {
+                        _host = BaseUrl;
+                    }
+                    else
+                    {
+                        _host = hostMatch.Groups[2].Value;
+                    }
+
+
+                }
+                return _host;
+            }
+        }
 
         [FieldDefinition(2, Label = "API Key", Type = FieldType.Textbox, Privacy = PrivacyLevel.ApiKey, HelpText = "The API key for your Slskd instance. You can find or set this in the Slskd's settings under 'Options'.", Placeholder = "Enter your API key")]
         public string ApiKey { get; set; } = string.Empty;
