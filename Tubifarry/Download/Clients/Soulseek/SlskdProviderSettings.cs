@@ -48,6 +48,9 @@ namespace Tubifarry.Download.Clients.Soulseek
         public string BaseUrl { get; set; } = "http://localhost:5030";
 
         private string? _host;
+
+
+        [FieldDefinition(0, Label = "Host", Type = FieldType.Textbox, Hidden = HiddenType.Hidden)]
         public string Host
         {
             get
