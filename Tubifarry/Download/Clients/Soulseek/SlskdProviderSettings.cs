@@ -77,6 +77,10 @@ namespace Tubifarry.Download.Clients.Soulseek
                 }
                 return _host;
             }
+            set
+            {
+                // Nothing to do
+            }
         }
 
         [FieldDefinition(2, Label = "API Key", Type = FieldType.Textbox, Privacy = PrivacyLevel.ApiKey, HelpText = "The API key for your Slskd instance. You can find or set this in the Slskd's settings under 'Options'.", Placeholder = "Enter your API key")]
