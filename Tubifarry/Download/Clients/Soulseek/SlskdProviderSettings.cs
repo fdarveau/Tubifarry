@@ -62,7 +62,7 @@ namespace Tubifarry.Download.Clients.Soulseek
             {
                 if (_host == null)
                 {
-                    var hostRegex = new Regex("(.+://)?(.+)(:|/)/");
+                    var hostRegex = new Regex("(.+://)?(.+)(:|/)");
                     var hostMatch = hostRegex.Match(BaseUrl);
                     if (!hostMatch.Success)
                     {
