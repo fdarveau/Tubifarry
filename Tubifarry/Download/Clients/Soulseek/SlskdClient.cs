@@ -120,7 +120,7 @@ namespace Tubifarry.Download.Clients.Soulseek
 
             _logger.Trace($"Lyrics successfully written: {await metadataHandler.TryCreateLrcFileAsync(default)}");
         }));
-        
+
         public override IEnumerable<DownloadClientItem> GetItems()
         {
             UpdateDownloadItemsAsync().Wait();
