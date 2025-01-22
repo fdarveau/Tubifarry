@@ -203,7 +203,7 @@ namespace Tubifarry.Download.Clients.Soulseek
         public override DownloadClientInfo GetStatus() => new()
         {
             IsLocalhost = Settings.IsLocalhost,
-            OutputRootFolders = new List<OsPath> { _remotePathMappingService.RemapRemoteToLocal(Settings.BaseUrl, new OsPath(Settings.DownloadPath)) }
+            OutputRootFolders = new List<OsPath> { _remotePathMappingService.RemapRemoteToLocal(Settings.Host, new OsPath(Settings.DownloadPath)) }
         };
 
         private SlskdDownloadItem? GetDownloadItem(string downloadId) => GetDownloadItem(int.Parse(downloadId));
