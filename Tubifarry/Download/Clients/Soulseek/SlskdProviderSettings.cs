@@ -67,8 +67,6 @@ namespace Tubifarry.Download.Clients.Soulseek
                     {
                         _host = hostMatch.Groups[2].Value;
                     }
-
-
                 }
                 return _host;
             }
