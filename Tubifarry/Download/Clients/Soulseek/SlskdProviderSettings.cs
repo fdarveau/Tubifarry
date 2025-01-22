@@ -79,7 +79,7 @@ namespace Tubifarry.Download.Clients.Soulseek
             }
             set
             {
-                // Nothing to do
+                // Nothing to do; setter required by Lidarr when saving the config
             }
         }
 
