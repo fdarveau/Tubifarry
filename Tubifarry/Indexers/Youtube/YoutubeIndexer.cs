@@ -15,7 +15,7 @@ namespace Tubifarry.Indexers.Youtube
         public override string Name => "Youtube";
         public override string Protocol => nameof(YoutubeDownloadProtocol);
         public override bool SupportsRss => false;
-        public override bool SupportsSearch => true;
+        public override bool SupportsSearch => false;
         public override int PageSize => 50;
         public override TimeSpan RateLimit => new(30);
 
@@ -37,7 +37,7 @@ namespace Tubifarry.Indexers.Youtube
             _parseIndexerResponse = parser;
             _indexerRequestGenerator = generator;
 
-            RequestHandler.MainRequestHandlers[0].MaxParallelism = 2;
+            RequestHandler.MainRequestHandlers[0].MaxParallelism = 1;
         }
 
         protected override Task Test(List<ValidationFailure> failures)

@@ -32,26 +32,71 @@ namespace Tubifarry.Download.Clients.Soulseek
         public override async Task<string> Download(RemoteAlbum remoteAlbum, IIndexer indexer)
         {
             SlskdDownloadItem item = new(remoteAlbum);
-            HttpRequest request = BuildHttpRequest(remoteAlbum.Release.DownloadUrl, HttpMethod.Post, remoteAlbum.Release.Source);
-            HttpResponse response = await _httpClient.ExecuteAsync(request);
+            try
+            {
+                HttpRequest request = BuildHttpRequest(remoteAlbum.Release.DownloadUrl, HttpMethod.Post, remoteAlbum.Release.Source);
+                HttpResponse response = await _httpClient.ExecuteAsync(request);
 
-            if (response.StatusCode != HttpStatusCode.Created)
-                throw new DownloadClientException("Failed to create download.");
-            if (Settings.UseLRCLIB)
+                if (response.StatusCode != HttpStatusCode.Created)
+                    throw new DownloadClientException("Failed to create download.");
                 item.FileStateChanged += FileStateChanged;
-            AddDownloadItem(item);
+                AddDownloadItem(item);
+            }
+            catch (Exception)
+            {
+                try
+                {
+                    RemoveItemAsync(item).Wait();
+                }
+                catch (Exception) { }
+                return null!;
+            }
             return item.ID.ToString();
         }
 
-        private void FileStateChanged(object? sender, SlskdDownloadFile file)
+        private void FileStateChanged(object? sender, SlskdFileState fileState)
         {
-            string filename = file.Filename;
+            fileState.UpdateMaxRetryCount(Settings.RetryAttempts);
+            string filename = fileState.File.Filename;
             string extension = Path.GetExtension(filename);
             AudioFormat format = AudioFormatHelper.GetAudioCodecFromExtension(extension.TrimStart('.'));
-
-            if (file.GetStatus() != DownloadItemStatus.Completed || format == AudioFormat.Unknown)
+            if (fileState.GetStatus() == DownloadItemStatus.Warning)
+            {
+                _logger.Trace($"Retrying download for file: {filename}. Attempt {fileState.RetryCount} of {fileState.MaxRetryCount}");
+                _ = RetryDownloadAsync(fileState, (SlskdDownloadItem)sender!);
                 return;
-            PostProcess((SlskdDownloadItem)sender!, file);
+            }
+
+            if (fileState.GetStatus() != DownloadItemStatus.Completed || format == AudioFormat.Unknown)
+                return;
+            if (Settings.UseLRCLIB)
+                PostProcess((SlskdDownloadItem)sender!, fileState.File);
+        }
+
+        private async Task RetryDownloadAsync(SlskdFileState fileState, SlskdDownloadItem item)
+        {
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(item.RemoteAlbum.Release.Source);
+                JsonElement root = doc.RootElement;
+                JsonElement matchingItem = root.EnumerateArray()
+                    .FirstOrDefault(x => x.GetProperty("Filename").GetString() == fileState.File.Filename);
+
+                if (matchingItem.ValueKind == JsonValueKind.Undefined)
+                    return;
+                string payload = JsonSerializer.Serialize(new[] { matchingItem });
+
+                HttpRequest request = BuildHttpRequest(item.RemoteAlbum.Release.DownloadUrl, HttpMethod.Post, payload);
+                HttpResponse response = await _httpClient.ExecuteAsync(request);
+
+                if (response.StatusCode == HttpStatusCode.Created)
+                    _logger.Trace($"Successfully retried download for file: {fileState.File.Filename}");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"Failed to retry download for file: {fileState.File.Filename}");
+            }
+            fileState.IncrementAttempt();
         }
 
         private void PostProcess(SlskdDownloadItem item, SlskdDownloadFile file) => item.PostProcessTasks.Add(Task.Run(async () =>
@@ -111,8 +156,13 @@ namespace Tubifarry.Download.Clients.Soulseek
                 foreach (SlskdDownloadDirectory dir in data)
                 {
                     HashCode hash = new();
-                    foreach (SlskdDownloadFile file in dir.Files ?? new List<SlskdDownloadFile>())
-                        hash.Add(file.Filename);
+                    List<string> sortedFilenames = dir.Files?
+                        .Select(file => file.Filename)
+                        .OrderBy(filename => filename)
+                        .ToList() ?? new List<string>();
+
+                    foreach (string? filename in sortedFilenames)
+                        hash.Add(filename);
                     SlskdDownloadItem? item = GetDownloadItem(hash.ToHashCode());
                     if (item == null)
                         continue;

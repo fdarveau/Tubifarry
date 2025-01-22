@@ -8,6 +8,7 @@ using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.RemotePathMappings;
+using Requests;
 using Tubifarry.Core.Model;
 using Tubifarry.Core.Utilities;
 using Xabe.FFmpeg;
@@ -23,6 +24,7 @@ namespace Tubifarry.Download.Clients.YouTube
         {
             _dlManager = dlManager;
             _naminService = namingConfigService;
+            RequestHandler.MainRequestHandlers[1].MaxParallelism = 1;
         }
 
         public override string Name => "Youtube";

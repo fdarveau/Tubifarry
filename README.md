@@ -61,7 +61,10 @@ Tubifarry supports **Slskd**, the Soulseek client, as both an **indexer** and **
 
 ---
 
-### YouTube Downloader Setup 🎥  
+### YouTube Downloader Setup 🎥 
+> #### YouTube Warning ⚠️
+> Please be aware that YouTube often blocks Tubifarry as a bot. We are currently waiting for external updates. Logging in and the YouTube-only indexer are disabled for now. If login is necessary, please revert to versions earlier than 1.6.0. We appreciate your patience and understanding during this time.
+
 Tubifarry allows you to download music directly from YouTube. Follow the steps below to configure the YouTube downloader.  
 
 #### **Configure the Indexer**:  

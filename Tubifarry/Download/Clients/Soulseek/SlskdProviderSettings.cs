@@ -36,6 +36,11 @@ namespace Tubifarry.Download.Clients.Soulseek
                 .GreaterThanOrEqualTo(0.1)
                 .WithMessage("Timeout must be at least 0.1 hours.")
                 .When(c => c.Timeout.HasValue);
+
+            // RetryAttempts validation
+            RuleFor(c => c.RetryAttempts)
+                .InclusiveBetween(0, 10)
+                .WithMessage("Retry attempts must be between 0 and 10.");
         }
     }
 
@@ -61,12 +66,14 @@ namespace Tubifarry.Download.Clients.Soulseek
         [FieldDefinition(7, Label = "Timeout", Type = FieldType.Textbox, HelpText = "Specify the maximum time to wait for a response from the Slskd instance before timing out. Fractional values are allowed (e.g., 1.5 for 1 hour and 30 minutes). Set leave blank for no timeout.", Unit = "hours", Advanced = true, Placeholder = "Enter timeout in hours")]
         public double? Timeout { get; set; }
 
+        [FieldDefinition(8, Label = "Retry Attempts", Type = FieldType.Number, HelpText = "The number of times to retry downloading a file if it fails.", Advanced = true, Placeholder = "Enter retry attempts")]
+        public int RetryAttempts { get; set; } = 1;
+
         [FieldDefinition(98, Label = "Is Fetched remote", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
         public bool IsRemotePath { get; set; }
 
         [FieldDefinition(99, Label = "Is Localhost", Type = FieldType.Checkbox, Hidden = HiddenType.Hidden)]
         public bool IsLocalhost { get; set; }
-
 
         public TimeSpan? GetTimeout() => Timeout == null ? null : TimeSpan.FromHours(Timeout.Value);
 

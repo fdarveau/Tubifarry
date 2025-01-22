@@ -58,7 +58,7 @@ namespace Tubifarry.Download.Clients.YouTube
         [FieldDefinition(0, Label = "Download Path", Type = FieldType.Path, HelpText = "Specify the directory where downloaded files will be saved.")]
         public string DownloadPath { get; set; } = "";
 
-        [FieldDefinition(1, Label = "Cookie Path", Type = FieldType.FilePath, Placeholder = "/downloads/Cookies/cookies.txt", HelpText = "Specify the path to the YouTube cookies file. This is optional but required for accessing restricted content.", Advanced = true)]
+        [FieldDefinition(1, Label = "Cookie Path", Type = FieldType.FilePath, Hidden = HiddenType.HiddenIfNotSet, Placeholder = "/downloads/Cookies/cookies.txt", HelpText = "Specify the path to the YouTube cookies file. This is optional but required for accessing restricted content.", Advanced = true)]
         public string CookiePath { get; set; } = string.Empty;
 
         [FieldDefinition(2, Label = "Use ID3v2.3 Tags", HelpText = "Enable this option to use ID3v2.3 tags for better compatibility with older media players like Windows Media Player.", Type = FieldType.Checkbox, Advanced = true)]

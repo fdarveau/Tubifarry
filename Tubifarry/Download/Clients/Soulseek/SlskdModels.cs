@@ -19,12 +19,12 @@ namespace Tubifarry.Download.Clients.Soulseek
         public string? Username { get; set; }
         public RemoteAlbum RemoteAlbum { get; set; }
 
-        public event EventHandler<SlskdDownloadFile>? FileStateChanged;
+        public event EventHandler<SlskdFileState>? FileStateChanged;
 
         private Logger _logger;
 
         private SlskdDownloadDirectory? _slskdDownloadDirectory;
-        private Dictionary<string, string> _previousFileStates = new();
+        private Dictionary<string, SlskdFileState> _previousFileStates = new();
 
         public List<Task> PostProcessTasks { get; } = new();
 
@@ -35,7 +35,7 @@ namespace Tubifarry.Download.Clients.Soulseek
             {
                 if (_slskdDownloadDirectory == value)
                     return;
-                CompareFileStates(_slskdDownloadDirectory, value);
+                CompareFileStates(value);
                 _slskdDownloadDirectory = value;
             }
         }
@@ -48,21 +48,34 @@ namespace Tubifarry.Download.Clients.Soulseek
             _lastUpdateTime = DateTime.UtcNow;
             _lastDownloadedSize = 0;
             HashCode hash = new();
-            foreach (SlskdFileData file in FileData)
-                hash.Add(file.Filename);
+            List<string?> sortedFilenames = FileData
+                .Select(file => file.Filename)
+                .OrderBy(filename => filename)
+                .ToList();
+            foreach (string? filename in sortedFilenames)
+                hash.Add(filename);
             ID = hash.ToHashCode();
             _downloadClientItem = new() { DownloadId = ID.ToString(), CanBeRemoved = true, CanMoveFiles = true };
         }
 
-        private void CompareFileStates(SlskdDownloadDirectory? previousDirectory, SlskdDownloadDirectory? newDirectory)
+        private void CompareFileStates(SlskdDownloadDirectory? newDirectory)
         {
             if (newDirectory?.Files == null)
                 return;
 
             foreach (SlskdDownloadFile file in newDirectory.Files)
-                if (_previousFileStates.TryGetValue(file.Id, out string? previousState) && previousState != file.State)
-                    FileStateChanged?.Invoke(this, file);
-            _previousFileStates = newDirectory.Files.ToDictionary(file => file.Id, file => file.State);
+            {
+                if (_previousFileStates.TryGetValue(file.Filename, out SlskdFileState? fileState) && fileState != null)
+                {
+                    fileState.UpdateFile(file);
+                    if (fileState.State != fileState.PreviousState)
+                        FileStateChanged?.Invoke(this, fileState);
+                }
+                else
+                    _previousFileStates.Add(file.Filename, new(file));
+
+
+            }
         }
 
         public OsPath GetFullFolderPath(string downloadPath) => new(Path.Combine(downloadPath, SlskdDownloadDirectory?.Directory
@@ -92,17 +105,17 @@ namespace Tubifarry.Download.Clients.Soulseek
             _lastUpdateTime = now;
             _lastDownloadedSize = downloadedSize;
 
-            List<DownloadItemStatus> fileStatuses = SlskdDownloadDirectory.Files.Select(file => file.GetStatus()).ToList();
-            List<string> failedFiles = SlskdDownloadDirectory.Files
+            List<DownloadItemStatus> fileStatuses = _previousFileStates.Values.Select(file => file.GetStatus()).ToList();
+            List<string> failedFiles = _previousFileStates.Values
                 .Where(file => file.GetStatus() == DownloadItemStatus.Failed)
-                .Select(file => Path.GetFileName(file.Filename)).ToList();
+                .Select(file => Path.GetFileName(file.File.Filename)).ToList();
 
             DownloadItemStatus status = DownloadItemStatus.Queued;
             DateTime lastTime = SlskdDownloadDirectory.Files.Max(x => x.EnqueuedAt > x.StartedAt ? x.EnqueuedAt : x.StartedAt + x.ElapsedTime);
 
             if (now - lastTime > timeout)
                 status = DownloadItemStatus.Failed;
-            else if ((double)failedFiles.Count / fileStatuses.Count * 100 > 10)
+            else if ((double)failedFiles.Count / fileStatuses.Count * 100 > 20)
             {
                 status = DownloadItemStatus.Failed;
                 _downloadClientItem.Message = $"Downloading {failedFiles.Count} files failed: {string.Join(", ", failedFiles)}";
@@ -121,10 +134,13 @@ namespace Tubifarry.Download.Clients.Soulseek
             }
             else if (fileStatuses.Any(status => status == DownloadItemStatus.Paused))
                 status = DownloadItemStatus.Paused;
+            else if (fileStatuses.Any(status => status == DownloadItemStatus.Warning))
+            {
+                _downloadClientItem.Message = "Some files failed. Retrying download...";
+                status = DownloadItemStatus.Warning;
+            }
             else if (fileStatuses.Any(status => status == DownloadItemStatus.Downloading))
                 status = DownloadItemStatus.Downloading;
-            else if (fileStatuses.Any(status => status == DownloadItemStatus.Warning))
-                status = DownloadItemStatus.Warning;
 
             // Update DownloadClientItem
             _downloadClientItem.TotalSize = totalSize;
@@ -133,6 +149,58 @@ namespace Tubifarry.Download.Clients.Soulseek
             _downloadClientItem.Status = status;
 
             return _downloadClientItem;
+        }
+    }
+
+    public class SlskdFileState
+    {
+        public SlskdDownloadFile File { get; private set; } = null!;
+        public int RetryCount { get; private set; }
+        private bool _retried = true;
+        public int MaxRetryCount { get; private set; } = 1;
+        public string State => File.State;
+        public string PreviousState { get; private set; } = "Requested";
+
+        public DownloadItemStatus GetStatus()
+        {
+            DownloadItemStatus status = GetStatus(State);
+            if ((status == DownloadItemStatus.Failed && RetryCount < MaxRetryCount) || _retried)
+                return DownloadItemStatus.Warning;
+            return status;
+        }
+
+        private static DownloadItemStatus GetStatus(string state) => state switch
+        {
+            "Requested" => DownloadItemStatus.Queued, // "Requested" is treated as "Queued"
+            "Queued, Remotely" or "Queued, Locally" => DownloadItemStatus.Queued, // Both are queued states
+            "Initializing" => DownloadItemStatus.Queued, // "Initializing" is treated as "Queued"
+            "InProgress" => DownloadItemStatus.Downloading, // "InProgress" maps to "Downloading"
+            "Completed, Succeeded" => DownloadItemStatus.Completed, // Successful completion
+            "Completed, Cancelled" => DownloadItemStatus.Failed, // Cancelled is treated as "Failed"
+            "Completed, TimedOut" => DownloadItemStatus.Failed, // Timed out is treated as "Failed"
+            "Completed, Errored" => DownloadItemStatus.Failed, // Errored is treated as "Failed"
+            "Completed, Rejected" => DownloadItemStatus.Failed, // Rejected is treated as "Failed"
+            _ => DownloadItemStatus.Queued // Default to "Queued" for unknown states
+        };
+
+        public SlskdFileState(SlskdDownloadFile file) => UpdateFile(file);
+
+        public void UpdateFile(SlskdDownloadFile file)
+        {
+            if (!_retried)
+                PreviousState = State;
+            else if (File != null && GetStatus(file.State) == DownloadItemStatus.Failed)
+                PreviousState = "Requested";
+            File = file;
+            _retried = false;
+        }
+
+        public void UpdateMaxRetryCount(int maxRetryCount) => MaxRetryCount = maxRetryCount;
+
+        public void IncrementAttempt()
+        {
+            _retried = true;
+            RetryCount++;
         }
     }
 
@@ -172,22 +240,8 @@ namespace Tubifarry.Download.Clients.Soulseek
        double PercentComplete,
        TimeSpan RemainingTime,
        TimeSpan? EndedAt
-   )
+    )
     {
-        public DownloadItemStatus GetStatus() => State switch
-        {
-            "Requested" => DownloadItemStatus.Queued, // "Requested" is treated as "Queued"
-            "Queued, Remotely" or "Queued, Locally" => DownloadItemStatus.Queued, // Both are queued states
-            "Initializing" => DownloadItemStatus.Queued, // "Initializing" is treated as "Queued"
-            "InProgress" => DownloadItemStatus.Downloading, // "InProgress" maps to "Downloading"
-            "Completed, Succeeded" => DownloadItemStatus.Completed, // Successful completion
-            "Completed, Cancelled" => DownloadItemStatus.Failed, // Cancelled is treated as "Failed"
-            "Completed, TimedOut" => DownloadItemStatus.Failed, // Timed out is treated as "Failed"
-            "Completed, Errored" => DownloadItemStatus.Failed, // Errored is treated as "Failed"
-            "Completed, Rejected" => DownloadItemStatus.Failed, // Rejected is treated as "Failed"
-            _ => DownloadItemStatus.Queued // Default to "Queued" for unknown states
-        };
-
         public static IEnumerable<SlskdDownloadFile> GetFiles(JsonElement filesElement)
         {
             if (filesElement.ValueKind != JsonValueKind.Array)

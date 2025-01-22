@@ -30,7 +30,7 @@ namespace Tubifarry.Indexers.Spotify
             if (generator.TokenIsExpired())
                 generator.StartTokenRequest();
 
-            RequestHandler.MainRequestHandlers[0].MaxParallelism = 2;
+            RequestHandler.MainRequestHandlers[0].MaxParallelism = 1;
         }
 
         protected override async Task Test(List<ValidationFailure> failures)

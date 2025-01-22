@@ -111,6 +111,7 @@ namespace Tubifarry.Indexers.Soulseek
                 Priotity = folderData.CalculatePriority(),
                 CustomString = JsonConvert.SerializeObject(filesToDownload),
                 InfoUrl = $"{(string.IsNullOrEmpty(Settings.ExternalUrl) ? Settings.BaseUrl : Settings.ExternalUrl)}/searches/{searchId}",
+                ExtraInfo = $"User: {folderData.Username}",
                 Duration = totalDuration
             };
         }

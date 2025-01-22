@@ -10,6 +10,8 @@ namespace Tubifarry.Core.Model
     /// </summary>
     public class AlbumData
     {
+        public string? Guid { get; set; }
+
         public string IndexerName { get; }
         // Mixed
         public string AlbumId { get; set; } = string.Empty;
@@ -34,6 +36,7 @@ namespace Tubifarry.Core.Model
         // Soulseek
         public long? Size { get; set; }
         public int Priotity { get; set; }
+        public string? ExtraInfo { get; set; }
 
         // Not used
         public AudioFormat Codec { get; set; } = AudioFormat.AAC;
@@ -45,7 +48,7 @@ namespace Tubifarry.Core.Model
         /// </summary>
         public ReleaseInfo ToReleaseInfo() => new()
         {
-            Guid = $"{IndexerName}-{AlbumId}-{Bitrate}",
+            Guid = Guid ?? $"{IndexerName}-{AlbumId}-{Bitrate}",
             Artist = ArtistName,
             Album = AlbumName,
             DownloadUrl = AlbumId,
@@ -92,12 +95,15 @@ namespace Tubifarry.Core.Model
                 calculatedBitrate = (int)(Size.Value * 8 / (Duration * 1000));
 
             if (AudioFormatHelper.IsLossyFormat(Codec) && calculatedBitrate != 0)
-                title += $" [{Codec} {calculatedBitrate}kbps] [WEB]";
-            if (!AudioFormatHelper.IsLossyFormat(Codec) && BitDepth != 0)
-                title += $" [{Codec} {BitDepth}bit] [WEB]";
+                title += $" [{Codec} {calculatedBitrate}kbps]";
+            else if (!AudioFormatHelper.IsLossyFormat(Codec) && BitDepth != 0)
+                title += $" [{Codec} {BitDepth}bit]";
             else
-                title += $" [{Codec}] [WEB]";
+                title += $" [{Codec}]";
+            if (ExtraInfo != null)
+                title += $" [{ExtraInfo}]";
 
+            title += " [WEB]";
             return title;
         }
 
