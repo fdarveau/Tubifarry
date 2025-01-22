@@ -120,7 +120,7 @@ namespace Tubifarry.Download.Clients.Soulseek
 
             _logger.Trace($"Lyrics successfully written: {await metadataHandler.TryCreateLrcFileAsync(default)}");
         }));
-
+        
         public override IEnumerable<DownloadClientItem> GetItems()
         {
             UpdateDownloadItemsAsync().Wait();
@@ -128,6 +128,7 @@ namespace Tubifarry.Download.Clients.Soulseek
             foreach (DownloadClientItem? clientItem in GetDownloadItems().Select(x => x.GetDownloadClientItem(Settings.DownloadPath, Settings.GetTimeout())))
             {
                 clientItem.DownloadClientInfo = clientInfo;
+                clientItem.OutputPath = _remotePathMappingService.RemapRemoteToLocal(Settings.Host, clientItem.OutputPath);
                 yield return clientItem;
             }
         }
