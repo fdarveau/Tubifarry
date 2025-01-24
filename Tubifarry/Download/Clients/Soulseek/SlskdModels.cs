@@ -65,13 +65,13 @@ namespace Tubifarry.Download.Clients.Soulseek
             _previousFileStates = newDirectory.Files.ToDictionary(file => file.Id, file => file.State);
         }
 
-        public OsPath GetFullFolderPath(string downloadPath) => new(Path.Combine(downloadPath, SlskdDownloadDirectory?.Directory
+        public OsPath GetFullFolderPath(OsPath downloadPath) => new(Path.Combine(downloadPath.FullPath, SlskdDownloadDirectory?.Directory
             .Replace('\\', '/')
             .TrimEnd('/')
             .Split('/')
             .LastOrDefault() ?? ""));
 
-        public DownloadClientItem GetDownloadClientItem(string downloadPath, TimeSpan? timeout)
+        public DownloadClientItem GetDownloadClientItem(OsPath downloadPath, TimeSpan? timeout)
         {
             _downloadClientItem.OutputPath = GetFullFolderPath(downloadPath);
             _downloadClientItem.Title = RemoteAlbum.Release.Title;
