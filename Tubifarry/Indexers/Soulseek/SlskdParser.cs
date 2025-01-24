@@ -66,7 +66,7 @@ namespace Tubifarry.Indexers.Soulseek
             {
                 _logger.Error(ex, "Failed to parse Slskd search response.");
             }
-            return albumDatas.Select(a => a.ToReleaseInfo()).ToList();
+            return albumDatas.OrderByDescending(x => x.Priotity).Select(a => a.ToReleaseInfo()).ToList();
         }
 
         private AlbumData CreateAlbumData(string searchId, IGrouping<string, SlskdFileData> directory, SlskdSearchData searchData, SlskdFolderData folderData)

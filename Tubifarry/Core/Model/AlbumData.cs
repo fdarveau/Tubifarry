@@ -48,7 +48,7 @@ namespace Tubifarry.Core.Model
         /// </summary>
         public ReleaseInfo ToReleaseInfo() => new()
         {
-            Guid = Guid ?? $"{IndexerName}-{AlbumId}-{Bitrate}",
+            Guid = Guid ?? $"{IndexerName}-{AlbumId}-{Codec}-{Bitrate}-{BitDepth}",
             Artist = ArtistName,
             Album = AlbumName,
             DownloadUrl = AlbumId,
